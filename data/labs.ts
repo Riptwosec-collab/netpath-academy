@@ -1186,6 +1186,15 @@ interface GigabitEthernet0/1
 
 export const labCategories = Array.from(new Set(labs.map((l) => l.category)));
 
+export const labStats = {
+  total:        labs.length,
+  beginner:     labs.filter(l => l.level === "Beginner").length,
+  intermediate: labs.filter(l => l.level === "Intermediate").length,
+  advanced:     labs.filter(l => l.level === "Advanced").length,
+  completed:    labs.filter(l => l.status === "completed").length,
+};
+
+
 export function getLabById(id: string): Lab | undefined {
   return labs.find((l) => l.id === id);
 }

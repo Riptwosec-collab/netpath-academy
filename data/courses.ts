@@ -1386,6 +1386,14 @@ export const courses: Course[] = [
 
 export const courseCategories = Array.from(new Set(courses.map((c) => c.category)));
 
+export const courseStats = {
+  total:        courses.length,
+  beginner:     courses.filter(c => c.level === "Beginner").length,
+  intermediate: courses.filter(c => c.level === "Intermediate").length,
+  advanced:     courses.filter(c => c.level === "Advanced").length,
+};
+
+
 export function getCourseById(id: string) {
   return courses.find((c) => c.id === id);
 }

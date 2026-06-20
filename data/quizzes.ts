@@ -752,6 +752,13 @@ export const quizzes: Quiz[] = [
 
 export const quizCategories = Array.from(new Set(quizzes.map((q) => q.category)));
 
+export const quizStats = {
+  total:        quizzes.length,
+  beginner:     quizzes.filter(q => q.level === "Beginner").length,
+  intermediate: quizzes.filter(q => q.level === "Intermediate").length,
+  advanced:     quizzes.filter(q => q.level === "Advanced").length,
+};
+
 export function getQuizById(id: string) {
   return quizzes.find((q) => q.id === id);
 }
