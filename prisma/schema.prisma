@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  name           String?
+  email          String   @unique
+  password       String?
+  image          String?
+  role           String   @default("USER")        // "USER" | "ADMIN"
+  xp             Int      @default(0)
+  level          Int      @default(1)
+  skillLevel     String   @default("Network Beginner")
+  learningStreak Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  progress        UserProgress[]
+  quizScores      QuizScore[]
+  labSubmissions  LabSubmission[]
+  badges          UserBadge[]
+  portfolioItems  PortfolioItem[]
+  aiConversations AiConversation[]
+  notes           Note[]
+}
+
+// ─── Courses ──────────────────────────────────────────────────────────────────
+
+model Course {
+  id          String   @id
+  title       String
+  description String
+  level       String
+  category    String
+  duration    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  modules     Module[]
+  progress    UserProgress[]
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  order       Int      @default(0)
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  lessons     Lesson[]
+}
+
+model Lesson {
+  id       String   @id @default(cuid())
+  title    String
+  duration String   @default("5 min")
+  type     String   @default("video")
+  order    Int      @default(0)
+  moduleId String
+  module   Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  progress UserProgress[]
+}
+
+// ─── Labs ─────────────────────────────────────────────────────────────────────
+
+model Lab {
+  id          String   @id @default(cuid())
+  title       String
+  category    String
+  level       String
+  duration    String
+  description String
+  scenario    String?
+  objective   String?
+  solution    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  submissions LabSubmission[]
+}
+
+// ─── Quizzes ──────────────────────────────────────────────────────────────────
+
+model Quiz {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+  category      String
+  level         String
+  duration      String   @default("15 min")
+  passingScore  Int      @default(70)
+  questionsJson String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  scores        QuizScore[]
+}
+
+// ─── Troubleshooting Guides ───────────────────────────────────────────────────
+
+model TroubleshootingGuide {
+  id                 String   @id @default(cuid())
+  title              String
+  category           String
+  severity           String   @default("Medium")
+  level              String   @default("Beginner")
+  description        String
+  symptomsJson       String?
+  possibleCausesJson String?
+  flowStepsJson      String?
+  commandsJson       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// ─── Progress ─────────────────────────────────────────────────────────────────
+
+model UserProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  courseId    String?
+  lessonId    String?
+  status      String    @default("NOT_STARTED")  // "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"
+  progress    Int       @default(0)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course      Course? @relation(fields: [courseId], references: [id])
+  lesson      Lesson? @relation(fields: [lessonId], references: [id])
+
+  @@unique([userId, courseId, lessonId])
+}
+
+model QuizScore {
+  id          String   @id @default(cuid())
+  userId      String
+  quizId      String
+  score       Int
+  passed      Boolean
+  answersJson String?
+  createdAt   DateTime @default(now())
+
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz        Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+}
+
+model LabSubmission {
+  id          String    @id @default(cuid())
+  userId      String
+  labId       String
+  status      String    @default("IN_PROGRESS")  // "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"
+  notes       String?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lab         Lab  @relation(fields: [labId], references: [id], onDelete: Cascade)
+}
+
+// ─── Badges ───────────────────────────────────────────────────────────────────
+
+model Badge {
+  id          String    @id
+  title       String
+  description String
+  icon        String
+  xpReward    Int       @default(100)
+
+  users       UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  badgeId  String
+  earnedAt DateTime @default(now())
+
+  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge    Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
+
+// ─── Portfolio ────────────────────────────────────────────────────────────────
+
+model PortfolioItem {
+  id            String   @id @default(cuid())
+  userId        String
+  title         String
+  type          String
+  category      String
+  level         String
+  description   String
+  skillsJson    String   @default("[]")
+  toolsJson     String   @default("[]")
+  summary       String
+  problem       String?
+  solution      String?
+  result        String?
+  configExample String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── AI Conversations ─────────────────────────────────────────────────────────
+
+model AiConversation {
+  id        String   @id @default(cuid())
+  userId    String?
+  mode      String
+  message   String
+  response  String
+  createdAt DateTime @default(now())
+
+  user      User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Notes ────────────────────────────────────────────────────────────────────
+
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String?
+  labId     String?
+  content   String
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design Tokens ──────────────────────────────── */
+:root {
+  --bg:        #050816;
+  --card:      rgba(255,255,255,0.06);
+  --primary:   #38bdf8;
+  --secondary: #8b5cf6;
+  --success:   #22c55e;
+  --warning:   #facc15;
+  --danger:    #ef4444;
+  --text:      #e5e7eb;
+  --muted:     #94a3b8;
+  --font-inter: 'Inter', sans-serif;
+}
+
+/* ─── Base ───────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-inter, sans-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Ambient background glow ───────────────────── */
+body::before {
+  content: "";
+  position: fixed;
+  top: -200px;
+  left: -200px;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56,189,248,0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  bottom: -200px;
+  right: -200px;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Scrollbar ──────────────────────────────────── */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.1); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(56,189,248,0.3); }
+
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { scrollbar-width: none; }
+
+/* ─── Selection ──────────────────────────────────── */
+::selection { background: rgba(56,189,248,0.25); color: #fff; }
+
+/* ─── Glassmorphism utility ──────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-primary {
+  background: rgba(56, 189, 248, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+}
+
+/* ─── Neon glow utilities ────────────────────────── */
+.neon-blue  { box-shadow: 0 0 20px rgba(56,189,248,0.3), 0 0 40px rgba(56,189,248,0.1); }
+.neon-purple{ box-shadow: 0 0 20px rgba(139,92,246,0.3), 0 0 40px rgba(139,92,246,0.1); }
+.neon-green { box-shadow: 0 0 20px rgba(34,197,94,0.3),  0 0 40px rgba(34,197,94,0.1);  }
+
+/* ─── Animations ─────────────────────────────────── */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+.animate-pulse-slow { animation: pulse-slow 3s ease-in-out infinite; }
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fade-in-up 0.4s ease-out forwards; }
+
+/* ─── Mobile safe area ───────────────────────────── */
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0); }
+
+/* ─── Reusable layout classes ────────────────────── */
+.page-container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6;
+}
+
+.glass-card {
+  @apply rounded-2xl border border-white/[0.07] bg-white/[0.03] backdrop-blur-xl;
+}
+
+.neon-border {
+  @apply border border-cyan-400/20 shadow-[0_0_30px_rgba(56,189,248,0.07)];
+}
+
+/* ─── Focus visible ──────────────────────────────── */
+:focus-visible {
+  outline: 2px solid rgba(56,189,248,0.5);
+  outline-offset: 2px;
+}
+
+/* ─── Code blocks ────────────────────────────────── */
+pre, code {
+  font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.8rem;
+}
+
+pre {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+/* ─── Hover card lift ────────────────────────────── */
+.card-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
