@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -50,7 +51,7 @@ export default async function ProfilePage() {
         name={user.name}
         email={user.email}
         image={user.image}
-        role={user.role}
+        role={user.role as "USER" | "ADMIN"}
         xp={user.xp}
         level={user.level}
         skillLevel={user.skillLevel}

@@ -28,7 +28,7 @@ export default function LabTopology({ lab }: { lab: Lab }) {
   /* Collect unique nodes */
   const nodeSet = new Set<string>();
   lab.topology.forEach((l) => { nodeSet.add(l.from); nodeSet.add(l.to); });
-  const nodes = [...nodeSet];
+  const nodes = Array.from(nodeSet);
 
   return (
     <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 md:p-6">

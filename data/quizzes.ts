@@ -740,4 +740,4 @@ export const quizStats = {
   advanced:     quizzes.filter((q) => q.level === "Advanced").length,
 };
 
-export const quizCategories = [...new Set(quizzes.map((q) => q.category))];
+export const quizCategories = Array.from(new Set(quizzes.map((q) => q.category)));

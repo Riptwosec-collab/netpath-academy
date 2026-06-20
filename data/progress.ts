@@ -192,7 +192,7 @@ export const courseProgressData: CourseProgress[] = [
   { id: "network-fundamentals",   title: "Network Fundamentals",       category: "Networking", completedLessons: 12, totalLessons: 12, progress: 100, lastActivity: "15 Jan" },
   { id: "switching-fundamentals", title: "Switching Fundamentals",     category: "Switching",  completedLessons: 8,  totalLessons: 10, progress: 80,  lastActivity: "22 Jan" },
   { id: "routing-fundamentals",   title: "Routing & Switching",        category: "Routing",    completedLessons: 6,  totalLessons: 12, progress: 50,  lastActivity: "5 Feb"  },
-  { id: "network-security-basics","Network Security Basics",           category: "Security",   completedLessons: 10, totalLessons: 10, progress: 100, lastActivity: "12 Feb" },
+  { id: "network-security-basics", title: "Network Security Basics",    category: "Security",   completedLessons: 10, totalLessons: 10, progress: 100, lastActivity: "12 Feb" },
   { id: "ospf-deep-dive",         title: "OSPF Deep Dive",             category: "Routing",    completedLessons: 3,  totalLessons: 8,  progress: 37,  lastActivity: "20 Feb" },
   { id: "bgp-essentials",         title: "BGP Essentials",             category: "Routing",    completedLessons: 0,  totalLessons: 10, progress: 0,   lastActivity: undefined},
 ];

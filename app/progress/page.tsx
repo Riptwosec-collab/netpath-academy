@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 // NOTE: Phase 11 integration — reads from DB when logged in, falls back to mock data
 // TODO: Pass dbUser props down to child components in Phase 11 full integration
 import { getServerSession } from "next-auth";

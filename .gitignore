@@ -31,3 +31,6 @@ Thumbs.db
 # ─── Testing ─────────────────────────────────────────────────────
 coverage/
 .vitest/
+
+.vercel
+.env*

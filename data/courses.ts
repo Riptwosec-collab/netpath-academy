@@ -1158,4 +1158,4 @@ export const courseStats = {
   advanced:     courses.filter((c) => c.level === "Advanced").length,
 };
 
-export const courseCategories = [...new Set(courses.map((c) => c.category))];
+export const courseCategories = Array.from(new Set(courses.map((c) => c.category)));

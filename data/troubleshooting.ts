@@ -855,4 +855,4 @@ export const guideStats = {
   low:      troubleshootingGuides.filter((g) => g.severity === "Low").length,
 };
 
-export const guideCategories = [...new Set(troubleshootingGuides.map((g) => g.category))];
+export const guideCategories = Array.from(new Set(troubleshootingGuides.map((g) => g.category)));

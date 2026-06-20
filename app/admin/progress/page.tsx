@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import prisma       from "@/lib/prisma";
 import AdminHeader  from "@/components/admin/AdminHeader";
 import AdminEmptyState from "@/components/admin/AdminEmptyState";
@@ -41,7 +42,7 @@ export default async function AdminProgressPage() {
                   <tr key={s.id} className="hover:bg-white/[0.02]">
                     <td className="px-4 py-2.5 text-white/55">{s.user.name ?? s.user.email}</td>
                     <td className="px-4 py-2.5 text-white/40">{s.lab.title}</td>
-                    <td className="px-4 py-2.5 text-cyan-400/70">{s.score ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-cyan-400/70">{s.notes ?? "—"}</td>
                     <td className="px-4 py-2.5">
                       <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
                         s.status === "COMPLETED" ? "bg-green-500/15 text-green-400" : "bg-yellow-500/15 text-yellow-400"

@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -17,7 +17,7 @@ async function main() {
       name:          "Admin",
       email:         "admin@netpath.academy",
       password:      adminPassword,
-      role:          UserRole.ADMIN,
+      role:          "ADMIN",
       xp:            9999,
       level:         7,
       skillLevel:    "Network Architect",
@@ -32,7 +32,7 @@ async function main() {
       name:          "Network Learner",
       email:         "demo@netpath.academy",
       password:      demoPassword,
-      role:          UserRole.USER,
+      role:          "USER",
       xp:            2450,
       level:         3,
       skillLevel:    "Junior Network Engineer",

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import prisma            from "@/lib/prisma";
 import { deleteCourseAction } from "@/lib/adminActions";
 import AdminHeader       from "@/components/admin/AdminHeader";

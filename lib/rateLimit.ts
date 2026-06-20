@@ -40,9 +40,9 @@ export function checkRateLimit(
 
   // Cleanup old keys periodically (simple GC)
   if (store.size > 10_000) {
-    for (const [k, v] of store.entries()) {
+    Array.from(store.entries()).forEach(([k, v]) => {
       if (v.resetAt < now) store.delete(k);
-    }
+    });
   }
 
   return { allowed, remaining, resetAt: entry.resetAt };

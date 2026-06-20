@@ -847,4 +847,4 @@ export const labStats = {
   inProgress:   labs.filter((l) => l.status === "in-progress").length,
 };
 
-export const labCategories = [...new Set(labs.map((l) => l.category))];
+export const labCategories = Array.from(new Set(labs.map((l) => l.category)));

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import prisma           from "@/lib/prisma";
 import AdminStatCard    from "@/components/admin/AdminStatCard";
 import AdminHeader      from "@/components/admin/AdminHeader";

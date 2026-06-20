@@ -157,7 +157,7 @@ const en = {
   "settings.langTh":     "Thai",
 } as const;
 
-const th: typeof en = {
+const th: Record<keyof typeof en, string> = {
   // ── Navigation ──────────────────────────────────────────────────
   "nav.dashboard":       "แดชบอร์ด",
   "nav.roadmap":         "โรดแมป",
@@ -312,4 +312,4 @@ const th: typeof en = {
 };
 
 export type TranslationKey = keyof typeof en;
-export const translations: Record<Lang, typeof en> = { en, th };
+export const translations: Record<Lang, Record<TranslationKey, string>> = { en, th };
