@@ -9,6 +9,7 @@ export interface IpEntry {
   subnet:    string;
   gateway:   string;
   vlan?:     string;
+  notes?:    string;
 }
 
 export interface TopologyLink {
