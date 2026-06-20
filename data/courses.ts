@@ -1155,6 +1155,233 @@ export const courses: Course[] = [
     relatedLabs: ["bgp-ebgp-config"],
     relatedQuizzes: ["bgp-routing-quiz"],
   },
+
+
+  /* ── MPLS & QoS ─────────────────────────────────────────────── */
+  {
+    id:          "mpls-qos",
+    title:       "MPLS & QoS",
+    category:    "Advanced",
+    level:       "Advanced",
+    duration:    "5 hr",
+    description: "เรียนรู้ MPLS Label Switching, Traffic Engineering และ Quality of Service บนเครือข่าย enterprise",
+    icon:        "⚡",
+    objectives:  ["เข้าใจหลักการ MPLS Label Switching", "ตั้งค่า LDP และ RSVP", "ออกแบบ QoS policy ด้วย DSCP", "ทำ Traffic Engineering ด้วย MPLS-TE"],
+    modules: [
+      {
+        id:          "mpls-fundamentals",
+        title:       "MPLS พื้นฐาน",
+        description: "เข้าใจ label switching และ forwarding plane",
+        lessons: [
+          {
+            id:       "mpls-concepts",
+            title:    "MPLS คืออะไร และทำงานอย่างไร",
+            duration: "20 min",
+            content:  ["MPLS เพิ่ม 32-bit label header ระหว่าง Layer 2 และ Layer 3 (Layer 2.5)", "LER เพิ่ม/ถอด label, LSR forward ตาม label โดยไม่ต้อง lookup IP", "LDP (Label Distribution Protocol) แลก label ระหว่าง LSR"],
+            commands: ["mpls ip", "mpls label protocol ldp", "show mpls interfaces", "show mpls ldp neighbor", "show mpls forwarding-table"],
+          },
+          {
+            id:       "mpls-vpn",
+            title:    "MPLS L3VPN",
+            duration: "25 min",
+            content:  ["MPLS L3VPN ใช้ VRF แยก routing table ของ customer แต่ละราย", "PE router รู้จัก VRF, P router ไม่รู้จัก customer prefix", "Route Distinguisher (RD) ทำให้ prefix ไม่ซ้ำกัน, Route Target (RT) ควบคุม import/export"],
+            commands: ["ip vrf CUSTOMER-A", "rd 65001:100", "route-target export 65001:100", "show ip vrf", "show ip route vrf CUSTOMER-A"],
+          },
+        ],
+      },
+      {
+        id:          "qos-basics",
+        title:       "Quality of Service",
+        description: "จัดลำดับความสำคัญของ traffic",
+        lessons: [
+          {
+            id:       "qos-concepts",
+            title:    "QoS Model และ DSCP",
+            duration: "20 min",
+            content:  ["QoS มี 3 model: Best-Effort, IntServ (RSVP), DiffServ (DSCP)", "DSCP อยู่ใน IP header ใช้ 6 bits (0-63), EF=46 สำหรับ VoIP", "Expedited Forwarding (EF) สำหรับ VoIP, Assured Forwarding (AF) สำหรับ video/data"],
+            commands: ["policy-map MARK-TRAFFIC", "class VOICE-CLASS", "set dscp ef", "service-policy input MARK-TRAFFIC", "show policy-map interface"],
+          },
+          {
+            id:       "qos-queuing",
+            title:    "Queuing และ Shaping",
+            duration: "20 min",
+            content:  ["CBWFQ จัด bandwidth ให้แต่ละ class", "LLQ เพิ่ม priority queue สำหรับ voice/video", "Traffic Shaping ปรับ rate ให้สม่ำเสมอ, Policing ตัด packet ที่เกิน rate"],
+            commands: ["policy-map WAN-QOS", "class VOICE", "priority 512", "class VIDEO", "bandwidth percent 30"],
+          },
+        ],
+      },
+    ],
+    relatedLabs:    ["mpls-ldp-lab"],
+    relatedQuizzes: [],
+  },
+
+  /* ── SD-WAN ──────────────────────────────────────────────────── */
+  {
+    id:          "sd-wan",
+    title:       "SD-WAN Fundamentals",
+    category:    "Advanced",
+    level:       "Advanced",
+    duration:    "4 hr",
+    description: "เข้าใจสถาปัตยกรรม SD-WAN, Cisco Viptela, overlay topology และ application-aware routing",
+    icon:        "🌐",
+    objectives:  ["เข้าใจ SD-WAN architecture", "เปรียบเทียบ SD-WAN vs Traditional WAN", "ออกแบบ topology ด้วย vEdge/cEdge", "ตั้งค่า AAR policy"],
+    modules: [
+      {
+        id:          "sdwan-concepts",
+        title:       "SD-WAN Architecture",
+        description: "ภาพรวม control plane, data plane และ components",
+        lessons: [
+          {
+            id:       "sdwan-overview",
+            title:    "SD-WAN คืออะไร",
+            duration: "20 min",
+            content:  ["SD-WAN แยก control plane ออกจาก data plane ควบคุมจาก controller กลาง", "Cisco Viptela: vManage (GUI), vSmart (policy), vBond (orchestrator), vEdge/cEdge (data plane)", "ใช้ OMP (Overlay Management Protocol) แลก route ระหว่าง WAN edge"],
+            commands: ["show sdwan control connections", "show sdwan omp routes", "show sdwan bfd sessions"],
+          },
+          {
+            id:       "sdwan-transport",
+            title:    "Transport & Overlay",
+            duration: "20 min",
+            content:  ["SD-WAN ใช้ DTLS/TLS tunnel เป็น overlay บน transport ใดก็ได้ (MPLS, Internet, LTE)", "IPsec data plane tunnel ระหว่าง vEdge ให้ encryption อัตโนมัติ", "BFD วัด jitter, latency, packet loss ของแต่ละ transport"],
+            commands: [],
+          },
+        ],
+      },
+      {
+        id:          "sdwan-policy",
+        title:       "SD-WAN Policy",
+        description: "Application-Aware Routing",
+        lessons: [
+          {
+            id:       "sdwan-aar",
+            title:    "Application-Aware Routing",
+            duration: "25 min",
+            content:  ["AAR เลือก transport ที่ดีที่สุดสำหรับ application แต่ละประเภท", "ตั้งค่า SLA class: latency < 150ms, jitter < 30ms, loss < 1% สำหรับ VoIP", "ถ้า transport ไม่ผ่าน SLA จะ failover ไป transport อื่นอัตโนมัติ"],
+            commands: [],
+          },
+        ],
+      },
+    ],
+    relatedLabs:    [],
+    relatedQuizzes: [],
+  },
+
+  /* ── Network Automation ──────────────────────────────────────── */
+  {
+    id:          "network-automation",
+    title:       "Network Automation (Python & Ansible)",
+    category:    "Automation",
+    level:       "Intermediate",
+    duration:    "6 hr",
+    description: "เรียนรู้ automate เครือข่ายด้วย Python (Netmiko, Nornir) และ Ansible ตั้งแต่พื้นฐานถึง production",
+    icon:        "🤖",
+    objectives:  ["ใช้ Python Netmiko เชื่อมต่อ device", "เขียน Ansible Playbook สำหรับ network", "ใช้ Jinja2 template", "เก็บ config ด้วย Git (Network as Code)"],
+    modules: [
+      {
+        id:          "python-netmiko",
+        title:       "Python + Netmiko",
+        description: "เชื่อมต่อ Cisco IOS ด้วย Python",
+        lessons: [
+          {
+            id:       "netmiko-basics",
+            title:    "Netmiko เบื้องต้น",
+            duration: "25 min",
+            content:  ["Netmiko เป็น Python library สำหรับ SSH เข้า network device หลายยี่ห้อ", "ใช้ ConnectHandler() ระบุ device_type เช่น cisco_ios, juniper_junos", "send_command() ส่งคำสั่งและรับ output, send_config_set() ส่ง config หลายบรรทัด"],
+            commands: ["pip install netmiko", "from netmiko import ConnectHandler", "net_connect = ConnectHandler(**device)", "output = net_connect.send_command('show ip int brief')"],
+          },
+          {
+            id:       "netmiko-advanced",
+            title:    "Backup config และ Loop หลาย Device",
+            duration: "25 min",
+            content:  ["ใช้ loop ทำงานกับ device หลายตัว", "บันทึก running-config ลงไฟล์อัตโนมัติ", "จัดการ exception เมื่อ SSH ล้มเหลว และใช้ threading เพื่อ parallel"],
+            commands: ["for device in devices:", "  net_connect = ConnectHandler(**device)", "  config = net_connect.send_command('show run')"],
+          },
+        ],
+      },
+      {
+        id:          "ansible-network",
+        title:       "Ansible for Network",
+        description: "Playbook, module และ best practice",
+        lessons: [
+          {
+            id:       "ansible-basics",
+            title:    "Ansible Network Module",
+            duration: "25 min",
+            content:  ["Ansible ใช้ ios_command, ios_config module สำหรับ Cisco IOS", "Inventory file กำหนด host group และ connection=network_cli", "Playbook เขียนด้วย YAML ระบุ tasks ที่ต้องทำ"],
+            commands: ["ansible-playbook -i inventory.yml playbook.yml", "- name: Show IP brief", "  ios_command:", "    commands: show ip interface brief"],
+          },
+          {
+            id:       "ansible-config",
+            title:    "จัดการ Config ด้วย Ansible",
+            duration: "25 min",
+            content:  ["ใช้ ios_config module push configuration ให้ router/switch", "Jinja2 template สร้าง config ที่แตกต่างตาม variable แต่ละ device", "Idempotent: Ansible ตรวจว่า config มีอยู่แล้วหรือยัง ไม่ทำซ้ำ"],
+            commands: ["- name: Configure OSPF", "  ios_config:", "    lines:", "      - router ospf 1", "      - network 10.0.0.0 0.255.255.255 area 0"],
+          },
+        ],
+      },
+    ],
+    relatedLabs:    ["python-netmiko-lab"],
+    relatedQuizzes: [],
+  },
+
+  /* ── IPv6 Deep Dive ──────────────────────────────────────────── */
+  {
+    id:          "ipv6-deep-dive",
+    title:       "IPv6 Deep Dive",
+    category:    "Protocols",
+    level:       "Intermediate",
+    duration:    "4 hr",
+    description: "เจาะลึก IPv6 addressing, NDP, OSPFv3, BGP4+ และการ migrate จาก IPv4",
+    icon:        "6️⃣",
+    objectives:  ["เข้าใจ IPv6 address types", "ตั้งค่า SLAAC และ DHCPv6", "รัน OSPFv3", "ออกแบบ Dual-Stack และ Tunneling"],
+    modules: [
+      {
+        id:          "ipv6-addressing",
+        title:       "IPv6 Addressing",
+        description: "Address types, notation และ allocation",
+        lessons: [
+          {
+            id:       "ipv6-types",
+            title:    "IPv6 Address Types",
+            duration: "20 min",
+            content:  ["Global Unicast (2000::/3) — routable บน Internet", "Link-Local (FE80::/10) — ใช้เฉพาะ local link ไม่ route", "Multicast (FF00::/8) — แทน Broadcast, Loopback ::1"],
+            commands: ["ipv6 unicast-routing", "interface Gi0/0", "ipv6 address 2001:db8:1::1/64", "show ipv6 interface brief"],
+          },
+          {
+            id:       "ipv6-ndp",
+            title:    "NDP แทน ARP",
+            duration: "20 min",
+            content:  ["Neighbor Discovery Protocol (NDP) ใช้ ICMPv6 แทน ARP", "Router Solicitation/Advertisement สำหรับ SLAAC", "DAD (Duplicate Address Detection) ตรวจ address ซ้ำก่อนใช้"],
+            commands: ["show ipv6 neighbors", "show ipv6 routers", "debug ipv6 nd"],
+          },
+        ],
+      },
+      {
+        id:          "ipv6-routing",
+        title:       "IPv6 Routing Protocols",
+        description: "OSPFv3 และ Migration",
+        lessons: [
+          {
+            id:       "ospfv3",
+            title:    "OSPFv3",
+            duration: "20 min",
+            content:  ["OSPFv3 รัน IPv6 โดยเฉพาะ ใช้ Link-Local address เป็น neighbor", "Area, LSA type เหมือน OSPFv2 แต่ format ต่างกัน", "สามารถรันพร้อมกับ OSPFv2 บน router เดียวกัน"],
+            commands: ["ipv6 router ospf 1", "router-id 1.1.1.1", "interface Gi0/0", "ipv6 ospf 1 area 0", "show ipv6 ospf neighbor"],
+          },
+          {
+            id:       "ipv6-migration",
+            title:    "Migration Strategy",
+            duration: "20 min",
+            content:  ["Dual-Stack: รัน IPv4 และ IPv6 พร้อมกัน วิธีง่ายที่สุด", "6to4 Tunnel: Encapsulate IPv6 ใน IPv4 ข้าม IPv4-only network", "NAT64/DNS64: ให้ IPv6-only client เข้าถึง IPv4 server"],
+            commands: ["interface Tunnel0", "tunnel source Gi0/0", "tunnel mode ipv6ip", "ipv6 address 2001:db8::1/128"],
+          },
+        ],
+      },
+    ],
+    relatedLabs:    ["ipv6-ospfv3-lab"],
+    relatedQuizzes: [],
+  },
+
 ];
 
 export const courseCategories = Array.from(new Set(courses.map((c) => c.category)));

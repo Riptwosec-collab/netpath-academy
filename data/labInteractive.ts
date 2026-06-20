@@ -622,6 +622,174 @@ ipv6 router ospf 1
  router-id 1.1.1.1
 !`,
   },
+
+  "hsrp-vrrp-lab": {
+    hostname: "R1",
+    welcome:  "HSRP Lab — configure Hot Standby Router Protocol for gateway redundancy",
+    terminalCommands: {
+      "show standby":       "GigabitEthernet0/0 - Group 1\n  State is Active\n  Virtual IP address is 192.168.1.1\n  Priority 110 (configured 110)\n  Preemption enabled",
+      "show standby brief": "Interface   Grp  Pri P State    Active          Standby         Virtual IP\nGi0/0       1    110 P Active   local           192.168.1.3     192.168.1.1",
+      "show ip interface brief": "Interface              IP-Address      OK? Method Status  Protocol\nGigabitEthernet0/0    192.168.1.2     YES NVRAM  up      up",
+    },
+    steps: [
+      { id: "s1", title: "Set IP on Gi0/0", description: "Set IP 192.168.1.2/24 on GigabitEthernet0/0", xp: 50,
+        verify: "ip address 192.168.1.2 255.255.255.0",
+        solution: "interface GigabitEthernet0/0\n ip address 192.168.1.2 255.255.255.0\n no shutdown" },
+      { id: "s2", title: "Set HSRP Virtual IP", description: "Set Virtual IP 192.168.1.1 for HSRP group 1", xp: 75,
+        verify: "standby 1 ip 192.168.1.1",
+        solution: "interface GigabitEthernet0/0\n standby 1 ip 192.168.1.1" },
+      { id: "s3", title: "Set Priority 110", description: "Set priority 110 so R1 becomes Active", xp: 75,
+        verify: "standby 1 priority 110",
+        solution: "interface GigabitEthernet0/0\n standby 1 priority 110" },
+      { id: "s4", title: "Enable Preempt", description: "Enable preempt so R1 recovers Active role automatically", xp: 50,
+        verify: "standby 1 preempt",
+        solution: "interface GigabitEthernet0/0\n standby 1 preempt" },
+      { id: "s5", title: "Verify HSRP state", description: "Run show standby brief to confirm Active state", xp: 50,
+        hint: "State column must show Active" },
+    ],
+    configTemplate: `! R1
+interface GigabitEthernet0/0
+ ip address ___.___.___.___  255.255.255.0
+ standby ___ ip ___.___.___.___
+ standby ___ priority ___
+ standby ___ preempt`,
+    configSolution: `! R1
+interface GigabitEthernet0/0
+ ip address 192.168.1.2 255.255.255.0
+ standby 1 ip 192.168.1.1
+ standby 1 priority 110
+ standby 1 preempt`,
+  },
+
+  "eigrp-basic-lab": {
+    hostname: "R2",
+    welcome:  "EIGRP Lab — configure EIGRP AS 100 on 3 routers",
+    terminalCommands: {
+      "show ip eigrp neighbors": "H   Address         Interface   Hold  Uptime\n0   10.12.0.1       Gi0/0       12    00:05:23\n1   10.23.0.2       Gi0/1       11    00:05:20",
+      "show ip route eigrp":    "D    10.1.1.0/24 [90/156160] via 10.12.0.1, GigabitEthernet0/0\nD    10.3.3.0/24 [90/156160] via 10.23.0.2, GigabitEthernet0/1",
+      "show ip protocols":      "Routing Protocol is \"eigrp 100\"\n  EIGRP-IPv4 Protocol for AS(100)",
+    },
+    steps: [
+      { id: "s1", title: "Start EIGRP Process 100", description: "Create EIGRP routing process AS 100", xp: 50,
+        verify: "router eigrp 100", solution: "router eigrp 100" },
+      { id: "s2", title: "Advertise 10.12.0.0/30", description: "Add network for link to R1", xp: 75,
+        verify: "network 10.12.0.0 0.0.0.3",
+        solution: "router eigrp 100\n network 10.12.0.0 0.0.0.3" },
+      { id: "s3", title: "Advertise 10.23.0.0/30", description: "Add network for link to R3", xp: 75,
+        verify: "network 10.23.0.0 0.0.0.3",
+        solution: "router eigrp 100\n network 10.23.0.0 0.0.0.3" },
+      { id: "s4", title: "Disable auto-summary", description: "Disable auto-summary for classless routing", xp: 50,
+        verify: "no auto-summary", solution: "router eigrp 100\n no auto-summary" },
+      { id: "s5", title: "Verify neighbors", description: "Run show ip eigrp neighbors to confirm", xp: 50,
+        hint: "Must see R1 (10.12.0.1) and R3 (10.23.0.2)" },
+    ],
+    configTemplate: `router eigrp ___
+ network ___.___.___.___  ___.___.___.___
+ network ___.___.___.___  ___.___.___.___
+ no auto-summary`,
+    configSolution: `router eigrp 100
+ network 10.12.0.0 0.0.0.3
+ network 10.23.0.0 0.0.0.3
+ no auto-summary`,
+  },
+
+  "nat-pat-advanced": {
+    hostname: "R1",
+    welcome:  "NAT/PAT Lab — configure Static NAT and PAT overload",
+    terminalCommands: {
+      "show ip nat translations": "Pro Inside global      Inside local       Outside local      Outside global\n--- 203.0.113.5        192.168.1.100      ---                ---\ntcp 203.0.113.1:1024   192.168.1.10:1024  8.8.8.8:80         8.8.8.8:80",
+      "show ip nat statistics":   "Total active translations: 2 (1 static, 1 dynamic)\nOutside interfaces: GigabitEthernet0/1\nInside interfaces: GigabitEthernet0/0",
+      "show ip interface brief":  "Interface              IP-Address      OK? Method Status  Protocol\nGigabitEthernet0/0    192.168.1.1     YES NVRAM  up      up\nGigabitEthernet0/1    203.0.113.1     YES NVRAM  up      up",
+    },
+    steps: [
+      { id: "s1", title: "Set ip nat inside", description: "Set Gi0/0 as inside interface", xp: 50,
+        verify: "ip nat inside",
+        solution: "interface GigabitEthernet0/0\n ip nat inside" },
+      { id: "s2", title: "Set ip nat outside", description: "Set Gi0/1 as outside interface", xp: 50,
+        verify: "ip nat outside",
+        solution: "interface GigabitEthernet0/1\n ip nat outside" },
+      { id: "s3", title: "Configure Static NAT for Server", description: "Map 192.168.1.100 to 203.0.113.5", xp: 75,
+        verify: "ip nat inside source static 192.168.1.100 203.0.113.5",
+        solution: "ip nat inside source static 192.168.1.100 203.0.113.5" },
+      { id: "s4", title: "Create ACL for PAT", description: "Create INSIDE-HOSTS ACL covering 192.168.1.0/24", xp: 75,
+        verify: "ip access-list standard INSIDE-HOSTS",
+        solution: "ip access-list standard INSIDE-HOSTS\n permit 192.168.1.0 0.0.0.255" },
+      { id: "s5", title: "Configure PAT overload", description: "Apply NAT overload on outside interface", xp: 100,
+        verify: "ip nat inside source list INSIDE-HOSTS interface GigabitEthernet0/1 overload",
+        solution: "ip nat inside source list INSIDE-HOSTS interface GigabitEthernet0/1 overload" },
+    ],
+    configTemplate: `interface GigabitEthernet0/0
+ ip nat ___
+
+interface GigabitEthernet0/1
+ ip nat ___
+
+ip nat inside source static ___.___.___.___  ___.___.___.___
+
+ip access-list standard INSIDE-HOSTS
+ permit ___.___.___.___  ___.___.___.___
+
+ip nat inside source list INSIDE-HOSTS interface GigabitEthernet0/1 ___`,
+    configSolution: `interface GigabitEthernet0/0
+ ip nat inside
+
+interface GigabitEthernet0/1
+ ip nat outside
+
+ip nat inside source static 192.168.1.100 203.0.113.5
+
+ip access-list standard INSIDE-HOSTS
+ permit 192.168.1.0 0.0.0.255
+
+ip nat inside source list INSIDE-HOSTS interface GigabitEthernet0/1 overload`,
+  },
+
+  "mpls-ldp-lab": {
+    hostname: "P1",
+    welcome:  "MPLS LDP Lab — enable MPLS label switching and configure LDP",
+    terminalCommands: {
+      "show mpls interfaces":      "Interface              IP            Operational\nGigabitEthernet0/0     Yes (ldp)     Yes\nGigabitEthernet0/1     Yes (ldp)     Yes",
+      "show mpls ldp neighbor":     "Peer LDP Ident: 10.0.12.1:0; Local LDP Ident 10.0.13.1:0\n  State: Oper; Msgs sent/rcvd: 24/24",
+      "show mpls forwarding-table": "Local  Outgoing  Prefix            Outgoing   Next Hop\nLabel  Label     or Tunnel Id      interface\n16     Pop Label 10.0.12.0/30      Gi0/0      10.0.12.1\n17     17        10.0.23.0/30      Gi0/1      10.0.23.2",
+    },
+    steps: [
+      { id: "s1", title: "Enable OSPF as IGP", description: "Enable OSPF process 1 covering all interfaces", xp: 50,
+        verify: "router ospf 1",
+        solution: "router ospf 1\n network 10.0.0.0 0.255.255.255 area 0" },
+      { id: "s2", title: "Set MPLS label protocol", description: "Set LDP as the label protocol", xp: 75,
+        verify: "mpls label protocol ldp", solution: "mpls label protocol ldp" },
+      { id: "s3", title: "Set LDP Router-ID", description: "Use Loopback0 as LDP Router-ID", xp: 75,
+        verify: "mpls ldp router-id Loopback0",
+        solution: "mpls ldp router-id Loopback0 force" },
+      { id: "s4", title: "Enable MPLS on Gi0/0", description: "Enable mpls ip on interface toward PE1", xp: 50,
+        verify: "mpls ip",
+        solution: "interface GigabitEthernet0/0\n mpls ip" },
+      { id: "s5", title: "Verify LDP neighbor", description: "Run show mpls ldp neighbor to confirm", xp: 50,
+        hint: "Must see State: Oper for all neighbors" },
+    ],
+    configTemplate: `router ospf 1
+ network ___.___.___.___  ___.___.___.___  area ___
+
+mpls label protocol ___
+mpls ldp router-id ___ force
+
+interface GigabitEthernet0/0
+ mpls ip
+
+interface GigabitEthernet0/1
+ mpls ip`,
+    configSolution: `router ospf 1
+ network 10.0.0.0 0.255.255.255 area 0
+
+mpls label protocol ldp
+mpls ldp router-id Loopback0 force
+
+interface GigabitEthernet0/0
+ mpls ip
+
+interface GigabitEthernet0/1
+ mpls ip`,
+  },
 };
 
 export function getLabInteractive(labId: string): LabInteractive | null {

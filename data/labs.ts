@@ -886,6 +886,301 @@ router bgp 65002
  network 172.16.2.0 mask 255.255.255.0`,
     roadmapLevel: 4,
   },
+
+
+  /* ── HSRP / VRRP ────────────────────────────────────────────── */
+  {
+    id:          "hsrp-vrrp-lab",
+    title:       "HSRP & VRRP – Gateway Redundancy",
+    category:    "Switching",
+    level:       "Intermediate",
+    duration:    "45 min",
+    status:      "not-started",
+    description: "ตั้งค่า HSRP บน R1/R2 เพื่อให้มี Redundant Default Gateway สำหรับ PC ใน Network",
+    scenario:    "ต้องการความเสถียร: หาก Router ตัวหนึ่งล่ม PC ในเครือข่ายยังคงใช้งาน Internet ได้ผ่าน Router สำรอง",
+    objective:   "ตั้งค่า HSRP group 1 ให้ R1 เป็น Active (priority 110), R2 เป็น Standby, Virtual IP 192.168.1.1",
+    devices:     ["R1", "R2", "SW1", "PC1"],
+    topology: [
+      { from: "R1",  to: "SW1", port: "Gi0/0" },
+      { from: "R2",  to: "SW1", port: "Gi0/0" },
+      { from: "PC1", to: "SW1", port: "Fa0/1" },
+    ],
+    ipTable: [
+      { device: "R1",  interface: "GigabitEthernet0/0", ip: "192.168.1.2", subnet: "255.255.255.0", gateway: "-",           notes: "HSRP Active" },
+      { device: "R2",  interface: "GigabitEthernet0/0", ip: "192.168.1.3", subnet: "255.255.255.0", gateway: "-",           notes: "HSRP Standby" },
+      { device: "VIP", interface: "Virtual IP",         ip: "192.168.1.1", subnet: "-",             gateway: "-",           notes: "Default GW สำหรับ PC" },
+      { device: "PC1", interface: "NIC",                ip: "192.168.1.10",subnet: "255.255.255.0", gateway: "192.168.1.1", notes: "ใช้ Virtual IP เป็น GW" },
+    ],
+    tasks: [
+      "ตั้ง IP 192.168.1.2/24 บน R1 Gi0/0",
+      "ตั้ง HSRP group 1, Virtual IP 192.168.1.1 บน R1",
+      "ตั้ง Priority 110 + preempt บน R1",
+      "ตั้ง IP 192.168.1.3/24 + HSRP group 1 บน R2 (priority default 100)",
+      "ตรวจสอบ show standby brief บน R1 — ต้องเห็น Active",
+      "ทดสอบ ping 192.168.1.1 จาก PC1",
+    ],
+    hints: [
+      "HSRP group number ต้องตรงกันทั้ง 2 router",
+      "preempt ทำให้ R1 กลับมาเป็น Active เมื่อ recover",
+      "ค่า priority default คือ 100",
+    ],
+    expectedResult: "R1 เป็น Active state, PC1 ping 192.168.1.1 ได้, เมื่อปิด R1 PC ยัง ping ได้ผ่าน R2",
+    troubleshooting: [
+      "ไม่เห็น neighbor: ตรวจ multicast บน interface",
+      "ทั้งคู่เป็น Active: ตรวจ priority และ group number",
+      "Virtual IP ไม่ตอบ: ตรวจด้วย show standby brief",
+    ],
+    solution: `! R1
+interface GigabitEthernet0/0
+ ip address 192.168.1.2 255.255.255.0
+ standby 1 ip 192.168.1.1
+ standby 1 priority 110
+ standby 1 preempt
+ no shutdown
+
+! R2
+interface GigabitEthernet0/0
+ ip address 192.168.1.3 255.255.255.0
+ standby 1 ip 192.168.1.1
+ standby 1 preempt
+ no shutdown`,
+    roadmapLevel: 3,
+  },
+
+  /* ── EIGRP Basic ────────────────────────────────────────────── */
+  {
+    id:          "eigrp-basic-lab",
+    title:       "EIGRP – Enhanced Interior Gateway Routing",
+    category:    "Routing",
+    level:       "Intermediate",
+    duration:    "45 min",
+    status:      "not-started",
+    description: "ตั้งค่า EIGRP AS 100 บน 3 Router แบบ Hub-and-Spoke ให้ทุก subnet เห็นกัน",
+    scenario:    "สำนักงาน 3 สาขาต้องการ dynamic routing เพื่อให้แลกเปลี่ยน route กันอัตโนมัติ",
+    objective:   "ตั้งค่า EIGRP AS 100 บน R1/R2/R3 ให้ R1 เห็น 10.3.3.0/24 และ R3 เห็น 10.1.1.0/24",
+    devices:     ["R1", "R2", "R3"],
+    topology: [
+      { from: "R1", to: "R2", port: "10.12.0.0/30" },
+      { from: "R2", to: "R3", port: "10.23.0.0/30" },
+    ],
+    ipTable: [
+      { device: "R1", interface: "GigabitEthernet0/0", ip: "10.12.0.1", subnet: "255.255.255.252", gateway: "-", notes: "to R2" },
+      { device: "R1", interface: "Loopback0",          ip: "10.1.1.1",  subnet: "255.255.255.0",   gateway: "-", notes: "LAN stub" },
+      { device: "R2", interface: "GigabitEthernet0/0", ip: "10.12.0.2", subnet: "255.255.255.252", gateway: "-", notes: "to R1" },
+      { device: "R2", interface: "GigabitEthernet0/1", ip: "10.23.0.1", subnet: "255.255.255.252", gateway: "-", notes: "to R3" },
+      { device: "R3", interface: "GigabitEthernet0/0", ip: "10.23.0.2", subnet: "255.255.255.252", gateway: "-", notes: "to R2" },
+      { device: "R3", interface: "Loopback0",          ip: "10.3.3.1",  subnet: "255.255.255.0",   gateway: "-", notes: "LAN stub" },
+    ],
+    tasks: [
+      "เปิด EIGRP AS 100 บน R1: router eigrp 100",
+      "ประกาศ network 10.12.0.0/30 และ 10.1.1.0/24 บน R1",
+      "ตั้งค่า EIGRP บน R2 ประกาศทั้ง 2 link",
+      "ตั้งค่า EIGRP บน R3 ประกาศ link + Loopback",
+      "ปิด auto-summary ทุก router",
+      "ตรวจสอบ show ip eigrp neighbors และ show ip route eigrp",
+    ],
+    hints: [
+      "EIGRP AS number ต้องตรงกันทุก router",
+      "wildcard mask = inverse ของ subnet mask",
+      "no auto-summary จำเป็นสำหรับ classless routing",
+    ],
+    expectedResult: "R1 เห็น D 10.3.3.0/24 ใน routing table, R3 เห็น D 10.1.1.0/24",
+    troubleshooting: [
+      "Neighbor ไม่ขึ้น: ตรวจ AS number และ K-values ต้องตรงกัน",
+      "Route ไม่ขึ้น: ตรวจ network statement ครอบคลุม interface",
+      "Stuck in Active: ตรวจ physical connectivity",
+    ],
+    solution: `! R1
+router eigrp 100
+ network 10.12.0.0 0.0.0.3
+ network 10.1.1.0 0.0.0.255
+ no auto-summary
+
+! R2
+router eigrp 100
+ network 10.12.0.0 0.0.0.3
+ network 10.23.0.0 0.0.0.3
+ no auto-summary
+
+! R3
+router eigrp 100
+ network 10.23.0.0 0.0.0.3
+ network 10.3.3.0 0.0.0.255
+ no auto-summary`,
+    roadmapLevel: 3,
+  },
+
+  /* ── STP Tuning ─────────────────────────────────────────────── */
+  {
+    id:          "stp-tuning-lab",
+    title:       "STP Tuning – PortFast, BPDU Guard & Root Guard",
+    category:    "Switching",
+    level:       "Intermediate",
+    duration:    "40 min",
+    status:      "not-started",
+    description: "ตั้งค่า Spanning Tree ให้เหมาะสม: เลือก Root Bridge, เปิด PortFast, BPDU Guard และ Root Guard",
+    scenario:    "ปัญหา: PC ใช้เวลานาน (30+ วินาที) กว่าจะ connect ได้หลัง boot เพราะ STP ต้องผ่าน Listening/Learning",
+    objective:   "กำหนด SW1 เป็น Root Bridge และเปิด PortFast + BPDU Guard บน access port เพื่อลด boot time",
+    devices:     ["SW1", "SW2", "SW3", "PC1"],
+    topology: [
+      { from: "SW1", to: "SW2", port: "Trunk Gi0/0" },
+      { from: "SW1", to: "SW3", port: "Trunk Gi0/1" },
+      { from: "SW2", to: "SW3", port: "Trunk Gi0/2" },
+      { from: "SW3", to: "PC1", port: "Access Fa0/1" },
+    ],
+    ipTable: [
+      { device: "SW1", interface: "VLAN1 SVI", ip: "192.168.1.1", subnet: "255.255.255.0", gateway: "-", notes: "Root Bridge priority 4096" },
+      { device: "SW2", interface: "VLAN1 SVI", ip: "192.168.1.2", subnet: "255.255.255.0", gateway: "-", notes: "Default priority 32768" },
+      { device: "SW3", interface: "VLAN1 SVI", ip: "192.168.1.3", subnet: "255.255.255.0", gateway: "-", notes: "Default priority 32768" },
+    ],
+    tasks: [
+      "ลด priority ของ SW1 เป็น 4096 เพื่อเป็น Root Bridge",
+      "ตรวจสอบ SW1 เป็น Root Bridge ด้วย show spanning-tree",
+      "เปิด PortFast บน SW3 Fa0/1 (access port ต่อ PC)",
+      "เปิด BPDU Guard บน SW3 Fa0/1",
+      "ตั้ง Root Guard บน SW1 port ที่ต่อ downstream switch",
+    ],
+    hints: [
+      "ลด priority ให้ต่ำที่สุดใน network เพื่อเป็น Root",
+      "PortFast ห้ามใช้กับ trunk port",
+      "BPDU Guard จะ err-disable port ถ้าได้รับ BPDU",
+    ],
+    expectedResult: "SW1 เป็น Root Bridge, PC1 เชื่อมต่อเร็วขึ้น, BPDU Guard ปกป้อง access port",
+    troubleshooting: [
+      "Root Bridge ผิด: ตรวจ priority ด้วย show spanning-tree",
+      "Port err-disabled: BPDU Guard ทำงาน ตรวจว่ามี Switch ต่ออยู่",
+      "PortFast ไม่ช่วย: ตรวจว่า port เป็น access mode",
+    ],
+    solution: `! SW1 – เป็น Root Bridge
+spanning-tree vlan 1 priority 4096
+
+! SW3 – PortFast + BPDU Guard บน port ต่อ PC
+interface FastEthernet0/1
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+
+! SW1 – Root Guard บน port ต่อ downstream
+interface GigabitEthernet0/0
+ spanning-tree guard root`,
+    roadmapLevel: 2,
+  },
+
+  /* ── NAT PAT Advanced ───────────────────────────────────────── */
+  {
+    id:          "nat-pat-advanced",
+    title:       "NAT PAT – Dynamic NAT & Overload",
+    category:    "Routing",
+    level:       "Intermediate",
+    duration:    "40 min",
+    status:      "not-started",
+    description: "ตั้งค่า Static NAT สำหรับ Server และ PAT (overload) สำหรับ internal client ทั้งหมด",
+    scenario:    "บริษัทมี Public IP จำกัด ต้องการให้ internal host ทุกเครื่องออก Internet ผ่าน IP เดียว",
+    objective:   "ตั้ง Static NAT map Server 192.168.1.100 → 203.0.113.5 และ PAT สำหรับ 192.168.1.0/24",
+    devices:     ["R1", "ISP", "Server", "PC1"],
+    topology: [
+      { from: "R1", to: "ISP",    port: "Gi0/1 – outside" },
+      { from: "R1", to: "Server", port: "Gi0/0 – inside" },
+      { from: "R1", to: "PC1",    port: "Gi0/0 – inside" },
+    ],
+    ipTable: [
+      { device: "R1",     interface: "GigabitEthernet0/0", ip: "192.168.1.1",   subnet: "255.255.255.0",   gateway: "-",           notes: "inside" },
+      { device: "R1",     interface: "GigabitEthernet0/1", ip: "203.0.113.1",   subnet: "255.255.255.252", gateway: "-",           notes: "outside" },
+      { device: "Server", interface: "NIC",                ip: "192.168.1.100", subnet: "255.255.255.0",   gateway: "192.168.1.1", notes: "Static NAT" },
+      { device: "PC1",    interface: "NIC",                ip: "192.168.1.10",  subnet: "255.255.255.0",   gateway: "192.168.1.1", notes: "PAT" },
+    ],
+    tasks: [
+      "กำหนด ip nat inside บน Gi0/0",
+      "กำหนด ip nat outside บน Gi0/1",
+      "ตั้ง Static NAT: 192.168.1.100 → 203.0.113.5",
+      "สร้าง ACL INSIDE-HOSTS ครอบคลุม 192.168.1.0/24",
+      "ตั้ง PAT overload ใช้ outside interface",
+      "ตรวจสอบ show ip nat translations",
+    ],
+    hints: [
+      "ต้องกำหนด inside/outside บน interface ก่อนเสมอ",
+      "Static NAT ไม่ต้องการ ACL",
+      "PAT overload ใช้ interface keyword แทน pool เพื่อประหยัด IP",
+    ],
+    expectedResult: "PC1 ping 8.8.8.8 ได้, show ip nat translations แสดง PAT entry พร้อม port",
+    troubleshooting: [
+      "NAT ไม่ทำงาน: ตรวจ ip nat inside/outside บน interface",
+      "Static NAT ไม่ตอบ: ตรวจ default route ออก internet",
+      "PAT ไม่ทำงาน: ตรวจ ACL match กับ traffic จริง",
+    ],
+    solution: `! R1
+interface GigabitEthernet0/0
+ ip nat inside
+
+interface GigabitEthernet0/1
+ ip nat outside
+
+ip nat inside source static 192.168.1.100 203.0.113.5
+
+ip access-list standard INSIDE-HOSTS
+ permit 192.168.1.0 0.0.0.255
+
+ip nat inside source list INSIDE-HOSTS interface GigabitEthernet0/1 overload`,
+    roadmapLevel: 3,
+  },
+
+  /* ── MPLS LDP ───────────────────────────────────────────────── */
+  {
+    id:          "mpls-ldp-lab",
+    title:       "MPLS LDP – Label Distribution Protocol",
+    category:    "Advanced",
+    level:       "Advanced",
+    duration:    "50 min",
+    status:      "not-started",
+    description: "เปิดใช้ MPLS บน backbone router ตั้งค่า LDP และตรวจสอบ label forwarding table",
+    scenario:    "ISP ต้องการ upgrade network ใช้ MPLS เพื่อรองรับ L3VPN และ Traffic Engineering",
+    objective:   "เปิด MPLS + LDP บน PE1-P1-P2-PE2 ให้เกิด label forwarding สำหรับทุก prefix",
+    devices:     ["PE1", "P1", "P2", "PE2"],
+    topology: [
+      { from: "PE1", to: "P1",  port: "10.0.12.0/30" },
+      { from: "P1",  to: "P2",  port: "10.0.13.0/30" },
+      { from: "P2",  to: "PE2", port: "10.0.23.0/30" },
+    ],
+    ipTable: [
+      { device: "PE1", interface: "Gi0/0", ip: "10.0.12.1", subnet: "255.255.255.252", gateway: "-", notes: "MPLS enabled" },
+      { device: "P1",  interface: "Gi0/0", ip: "10.0.12.2", subnet: "255.255.255.252", gateway: "-", notes: "MPLS enabled" },
+      { device: "P1",  interface: "Gi0/1", ip: "10.0.13.1", subnet: "255.255.255.252", gateway: "-", notes: "MPLS enabled" },
+      { device: "P2",  interface: "Gi0/0", ip: "10.0.13.2", subnet: "255.255.255.252", gateway: "-", notes: "MPLS enabled" },
+      { device: "P2",  interface: "Gi0/1", ip: "10.0.23.1", subnet: "255.255.255.252", gateway: "-", notes: "MPLS enabled" },
+      { device: "PE2", interface: "Gi0/0", ip: "10.0.23.2", subnet: "255.255.255.252", gateway: "-", notes: "MPLS enabled" },
+    ],
+    tasks: [
+      "ตั้งค่า OSPF ให้ทุก router เห็นกันก่อน",
+      "กำหนด mpls label protocol ldp ทุก router",
+      "กำหนด mpls ldp router-id Loopback0 force",
+      "เปิด mpls ip บน interface ทุก link",
+      "ตรวจสอบ show mpls ldp neighbor",
+      "ตรวจสอบ show mpls forwarding-table",
+    ],
+    hints: [
+      "ต้องมี IGP route ก่อน MPLS ถึงจะสร้าง label ได้",
+      "LDP ใช้ port UDP/TCP 646",
+      "PHP (Penultimate Hop Popping) เกิดขึ้นอัตโนมัติ",
+    ],
+    expectedResult: "show mpls ldp neighbor แสดง State: Oper, show mpls forwarding-table มี label ทุก prefix",
+    troubleshooting: [
+      "LDP neighbor ไม่ขึ้น: ตรวจ mpls ip บน interface ทั้ง 2 ฝั่ง",
+      "Label ไม่มี: ตรวจ IGP route มีใน routing table ก่อน",
+      "Traffic ไม่ถูก label: ตรวจ CEF ด้วย show ip cef",
+    ],
+    solution: `! ทุก router (ตัวอย่าง P1)
+router ospf 1
+ network 10.0.0.0 0.255.255.255 area 0
+
+mpls label protocol ldp
+mpls ldp router-id Loopback0 force
+
+interface GigabitEthernet0/0
+ mpls ip
+
+interface GigabitEthernet0/1
+ mpls ip`,
+    roadmapLevel: 5,
+  },
 ];
 
 export const labCategories = Array.from(new Set(labs.map((l) => l.category)));
