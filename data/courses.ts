@@ -1122,6 +1122,519 @@ export const courses: Course[] = [
       },
     ],
   },
+
+  /* ══════════════════════════════════════════════════════════════
+   * 9. BGP Routing
+   * ══════════════════════════════════════════════════════════════ */
+  {
+    id:          "bgp-routing",
+    title:       "BGP Routing Protocol",
+    description: "เรียนรู้ BGP ตั้งแต่พื้นฐาน eBGP/iBGP, Path Selection, Communities และ BGP Policy สำหรับ ISP และ Enterprise WAN",
+    level:       "Advanced",
+    category:    "Routing",
+    duration:    "8 hours",
+    progress:    0,
+    roleTarget:  "Network Engineer / ISP Engineer",
+    relatedLabs: ["bgp-ebgp-config"],
+    modules: [
+      {
+        id:          "bgp-basics",
+        title:       "BGP พื้นฐาน",
+        description: "เข้าใจว่า BGP คืออะไร ทำงานอย่างไร และต่างจาก IGP อย่างไร",
+        lessons: [
+          {
+            id:       "bgp-overview",
+            title:    "BGP คืออะไร และเมื่อไหร่ต้องใช้",
+            duration: "20 min",
+            type:     "lesson",
+            status:   "not-started",
+            objectives: [
+              "อธิบายความแตกต่างระหว่าง IGP และ EGP",
+              "รู้ว่าเมื่อไหร่ควรใช้ BGP แทน OSPF/EIGRP",
+              "เข้าใจ AS Number และ BGP Neighbor",
+            ],
+            content: [
+              {
+                heading: "BGP คืออะไร",
+                body: "BGP (Border Gateway Protocol) คือ EGP (Exterior Gateway Protocol) ที่ใช้แลกเปลี่ยน Routing Information ระหว่าง Autonomous System (AS) ต่างๆ บน Internet BGP เป็น Protocol หลักที่ทำให้ Internet ทำงานได้ โดย ISP ทั่วโลกใช้ BGP คุยกัน",
+              },
+              {
+                heading: "eBGP vs iBGP",
+                body: "eBGP (external BGP) คือการ Peer ระหว่าง AS ต่างกัน ส่วน iBGP (internal BGP) คือการ Peer ภายใน AS เดียวกัน iBGP ต้องการ Full Mesh หรือ Route Reflector เพื่อป้องกัน Loop",
+              },
+            ],
+            diagramText: "AS 65001 (ISP A) ←eBGP→ AS 65002 (Enterprise) ←iBGP→ AS 65002 (Branch)",
+            commands: [
+              { title: "Config BGP Process", command: "router bgp 65001", description: "เริ่ม BGP Process พร้อม AS Number" },
+              { title: "Add eBGP Neighbor", command: "neighbor 1.1.1.2 remote-as 65002", description: "กำหนด eBGP Neighbor พร้อม AS ปลายทาง" },
+              { title: "Verify BGP Neighbors", command: "show bgp summary", description: "ดูสถานะ BGP Neighbor ทั้งหมด" },
+            ],
+            commonMistakes: [
+              "ลืมใส่ network command ทำให้ไม่มี prefix ส่งออก",
+              "AS Number ผิด ทำให้ Neighbor ไม่ขึ้น Established",
+            ],
+            keyTakeaways: [
+              "BGP ใช้สำหรับ Inter-AS Routing บน Internet",
+              "eBGP Peer ระหว่าง AS ต่างกัน, iBGP Peer ภายใน AS เดียว",
+            ],
+            summary: "BGP คือ Routing Protocol หลักของ Internet ใช้เมื่อต้องการควบคุม Traffic Policy ระหว่าง AS",
+            prevLessonId: null,
+            nextLessonId: "bgp-path-selection",
+          },
+          {
+            id:       "bgp-path-selection",
+            title:    "BGP Path Selection & Attributes",
+            duration: "25 min",
+            type:     "lesson",
+            status:   "not-started",
+            objectives: [
+              "เข้าใจ BGP Attributes หลัก: Weight, Local Pref, AS-Path, MED",
+              "อธิบาย BGP Best Path Selection Algorithm",
+              "Config Local Preference เพื่อ Control Outbound Traffic",
+            ],
+            content: [
+              {
+                heading: "BGP Attributes",
+                body: "BGP ใช้ Attributes เพื่อ Select Best Path: Weight (Cisco only, highest wins), Local Preference (highest wins, eBGP default 100), AS-Path (shortest wins), Origin (IGP > EGP > Incomplete), MED (lowest wins)",
+              },
+            ],
+            diagramText: "Weight(32768) → LocalPref(100) → Locally Originated → AS-Path → Origin → MED",
+            commands: [
+              { title: "Set Local Preference", command: "neighbor 1.1.1.2 route-map SET_LOCALPREF in", description: "ใช้ Route-map กำหนด Local Preference" },
+              { title: "Show BGP Table", command: "show bgp ipv4 unicast", description: "ดู BGP Table พร้อม Best Path marker (*>)" },
+            ],
+            commonMistakes: [
+              "สับสนระหว่าง Weight (local only) และ Local Preference (AS-wide)",
+              "MED comparison ทำงานเฉพาะ route จาก AS เดียวกัน",
+            ],
+            keyTakeaways: [
+              "BGP เลือก Best Path ตาม Attribute ลำดับ W-L-L-A-O-M-...",
+              "Local Preference ใช้ควบคุม Outbound Traffic ภายใน AS",
+            ],
+            summary: "BGP Path Selection ใช้ Attributes หลายตัวเรียงลำดับ Weight ชนะ Local Pref ชนะ AS-Path",
+            prevLessonId: "bgp-overview",
+            nextLessonId: "bgp-policy",
+          },
+          {
+            id:       "bgp-policy",
+            title:    "BGP Route Policy & Communities",
+            duration: "20 min",
+            type:     "lab",
+            status:   "not-started",
+            objectives: [
+              "ใช้ Route-map กรอง BGP Prefix",
+              "ติด BGP Community เพื่อส่ง Policy ให้ Peer",
+              "Config Prefix-list กำหนด Prefix ที่รับ/ส่ง",
+            ],
+            content: [
+              {
+                heading: "BGP Communities",
+                body: "BGP Community คือ Tag ที่ติดกับ Route เพื่อส่ง Policy ไปยัง Peer เช่น no-export (ไม่ส่งออก AS), no-advertise (ไม่ประกาศต่อ) หรือ Custom Community เช่น 65001:100 สำหรับ Traffic Engineering",
+              },
+            ],
+            diagramText: "Router → Route-map → match prefix-list → set community → Neighbor",
+            commands: [
+              { title: "Set Community", command: "set community 65001:100 additive", description: "ติด Community ให้ BGP Route" },
+              { title: "Send Community", command: "neighbor 1.1.1.2 send-community", description: "ส่ง Community ไปยัง Neighbor (ต้อง enable)" },
+            ],
+            commonMistakes: [
+              "ลืม send-community command ทำให้ Peer ไม่เห็น Community",
+            ],
+            keyTakeaways: [
+              "Route-map + Prefix-list ใช้กรอง BGP Prefix ที่รับ/ส่ง",
+              "Community ใช้ส่ง Policy Signal ระหว่าง AS",
+            ],
+            summary: "BGP Policy ใช้ Route-map, Prefix-list และ Community ควบคุม Traffic ระหว่าง AS",
+            prevLessonId: "bgp-path-selection",
+            nextLessonId: null,
+          },
+        ],
+      },
+    ],
+  },
+
+  /* ══════════════════════════════════════════════════════════════
+   * 10. Network Automation
+   * ══════════════════════════════════════════════════════════════ */
+  {
+    id:          "network-automation",
+    title:       "Network Automation with Python",
+    description: "เรียนใช้ Python + Netmiko + NAPALM อัตโนมัติงาน Network เช่น Config Backup, Change Management และ Compliance Check",
+    level:       "Advanced",
+    category:    "Automation",
+    duration:    "10 hours",
+    progress:    0,
+    roleTarget:  "Network Engineer / DevNet Engineer",
+    relatedLabs: ["python-netmiko-lab"],
+    modules: [
+      {
+        id:          "automation-basics",
+        title:       "Python สำหรับ Network Engineer",
+        description: "พื้นฐาน Python ที่จำเป็นสำหรับงาน Network Automation",
+        lessons: [
+          {
+            id:       "python-net-intro",
+            title:    "ทำไมต้องเรียน Network Automation",
+            duration: "15 min",
+            type:     "lesson",
+            status:   "not-started",
+            objectives: [
+              "เข้าใจประโยชน์ของ Network Automation",
+              "รู้จัก Tool หลัก: Netmiko, NAPALM, Nornir, Ansible",
+              "เปรียบเทียบ Manual Config vs Automated Config",
+            ],
+            content: [
+              {
+                heading: "ปัญหาของ Manual Configuration",
+                body: "การ Config Network ด้วยมือมีข้อเสีย คือ ใช้เวลานาน เกิด Human Error ง่าย ไม่สามารถ Scale ได้ดี และยากต่อการ Audit Network Automation แก้ปัญหาเหล่านี้ด้วยการเขียน Script ที่ทำซ้ำได้ ตรวจสอบได้ และ Deploy เร็วกว่า",
+              },
+              {
+                heading: "Netmiko คืออะไร",
+                body: "Netmiko คือ Python Library ที่ Simplify การเชื่อมต่อกับ Network Device ผ่าน SSH รองรับ Cisco IOS, NX-OS, EOS, Junos และอื่นๆ ทำให้เขียน Script ส่ง Command และรับ Output ได้ง่ายมาก",
+              },
+            ],
+            diagramText: "Python Script → Netmiko → SSH → Router/Switch → Output → Parse → Report",
+            commands: [
+              { title: "Install Netmiko", command: "pip install netmiko", description: "ติดตั้ง Netmiko Library" },
+              { title: "Basic Connection", command: "from netmiko import ConnectHandler\ndevice = ConnectHandler(device_type='cisco_ios', host='192.168.1.1', username='admin', password='cisco')", description: "เชื่อมต่อ Cisco IOS ด้วย Netmiko" },
+            ],
+            commonMistakes: [
+              "device_type ผิด ทำให้ SSH handshake fail",
+              "ลืม enable secret เมื่อต้องการรัน Privileged Command",
+            ],
+            keyTakeaways: [
+              "Netmiko ทำให้ SSH ไป Network Device ง่ายขึ้นมาก",
+              "Automation ลด Human Error และเพิ่ม Speed ในการ Deploy",
+            ],
+            summary: "Network Automation ด้วย Python ช่วยลดเวลาและ Error ในการจัดการ Network ขนาดใหญ่",
+            prevLessonId: null,
+            nextLessonId: "netmiko-config-backup",
+          },
+          {
+            id:       "netmiko-config-backup",
+            title:    "Backup Config อัตโนมัติด้วย Netmiko",
+            duration: "30 min",
+            type:     "lab",
+            status:   "not-started",
+            objectives: [
+              "เขียน Script Backup running-config จาก Router หลายตัว",
+              "Save Config ลงไฟล์พร้อม Timestamp",
+              "ใช้ Loop วน Device หลายตัวพร้อมกัน",
+            ],
+            content: [
+              {
+                heading: "Config Backup Script",
+                body: "Script นี้จะ Loop ผ่าน Device List, เชื่อมต่อด้วย Netmiko, รัน 'show running-config' และบันทึกไฟล์ชื่อ {hostname}_{date}.txt การ Backup Config ควรทำทุกวันและก่อน/หลัง Change เสมอ",
+              },
+            ],
+            diagramText: "Device List → Loop → SSH Connect → show run → Save File → Disconnect",
+            commands: [
+              { title: "Run Command", command: "output = net_connect.send_command('show running-config')", description: "ส่ง Command และรับ Output" },
+              { title: "Save to File", command: "with open(f'{hostname}_{date}.txt', 'w') as f:\n    f.write(output)", description: "บันทึก Config ลงไฟล์" },
+            ],
+            commonMistakes: [
+              "ไม่ Handle Exception เมื่อ Device ไม่ตอบสนอง Script จะหยุดทำงาน",
+            ],
+            keyTakeaways: [
+              "ใช้ try/except ป้องกัน Script หยุดเมื่อ Device ใดใดล้มเหลว",
+              "เก็บ Timestamp ในชื่อไฟล์เพื่อ Version Control ง่าย",
+            ],
+            summary: "Script Backup Config อัตโนมัติช่วยให้มี Config History ครบทุกวันโดยไม่ต้องทำเอง",
+            prevLessonId: "python-net-intro",
+            nextLessonId: null,
+          },
+        ],
+      },
+    ],
+  },
+
+  /* ══════════════════════════════════════════════════════════════
+   * 11. IPv6 Deep Dive
+   * ══════════════════════════════════════════════════════════════ */
+  {
+    id:          "ipv6-deep-dive",
+    title:       "IPv6 Deep Dive",
+    description: "ลงลึก IPv6 Address Types, OSPFv3, DHCPv6, Dual-Stack และการ Migrate จาก IPv4 สู่ IPv6 อย่างมืออาชีพ",
+    level:       "Intermediate",
+    category:    "IP Addressing",
+    duration:    "6 hours",
+    progress:    0,
+    roleTarget:  "Network Engineer / ISP Engineer",
+    relatedLabs: ["ipv6-ospfv3-lab"],
+    modules: [
+      {
+        id:          "ipv6-addressing",
+        title:       "IPv6 Addressing",
+        description: "เข้าใจ IPv6 Address Format และประเภทต่างๆ",
+        lessons: [
+          {
+            id:       "ipv6-address-types",
+            title:    "IPv6 Address Types & Format",
+            duration: "20 min",
+            type:     "lesson",
+            status:   "not-started",
+            objectives: [
+              "อ่าน IPv6 Address 128-bit ได้",
+              "แยกประเภท Unicast, Multicast, Anycast",
+              "เข้าใจ Link-Local, Global Unicast, Loopback",
+            ],
+            content: [
+              {
+                heading: "IPv6 Address Format",
+                body: "IPv6 Address มี 128 bits แสดงด้วย 8 กลุ่ม Hexadecimal แยกด้วย colon เช่น 2001:0db8:85a3:0000:0000:8a2e:0370:7334 สามารถย่อได้โดยตัด 0 นำหน้าและใช้ :: แทน consecutive zeros",
+              },
+              {
+                heading: "IPv6 Address Types",
+                body: "Global Unicast (2000::/3) คือ IPv6 Public Address, Link-Local (FE80::/10) ใช้ภายใน Link เดียว, Loopback คือ ::1/128, Multicast (FF00::/8) ใช้ส่งหลาย Host, Anycast คือ IP เดียวบน Router หลายตัว",
+              },
+            ],
+            diagramText: "2001:db8::1/64 (Global) | FE80::1 (Link-Local) | FF02::1 (All-nodes Multicast)",
+            commands: [
+              { title: "Show IPv6 Interface", command: "show ipv6 interface brief", description: "ดู IPv6 Address บน Interface ทั้งหมด" },
+              { title: "Config IPv6", command: "ipv6 address 2001:db8:1::1/64", description: "กำหนด IPv6 Address บน Interface" },
+              { title: "Enable IPv6 Routing", command: "ipv6 unicast-routing", description: "เปิด IPv6 Routing บน Router (ต้องทำก่อน)" },
+            ],
+            commonMistakes: [
+              "ลืม ipv6 unicast-routing ทำให้ Router ไม่ Forward IPv6",
+              "สับสน Link-Local กับ Global Unicast — Link-Local ใช้ได้แค่ใน Segment เดียว",
+            ],
+            keyTakeaways: [
+              "IPv6 มี 128 bits vs IPv4 32 bits — Address ไม่มีวันหมด",
+              "Link-Local เกิดขึ้นอัตโนมัติ, Global Unicast ต้อง Config เอง",
+            ],
+            summary: "IPv6 Address มี 128 bits มีหลายประเภท Global Unicast ใช้บน Internet, Link-Local ใช้ภายใน Link",
+            prevLessonId: null,
+            nextLessonId: "ospfv3-config",
+          },
+          {
+            id:       "ospfv3-config",
+            title:    "OSPFv3 สำหรับ IPv6",
+            duration: "25 min",
+            type:     "lab",
+            status:   "not-started",
+            objectives: [
+              "Config OSPFv3 บน Router Cisco สำหรับ IPv6",
+              "Verify OSPFv3 Neighbor และ Route",
+              "เปรียบเทียบความแตกต่าง OSPFv2 vs OSPFv3",
+            ],
+            content: [
+              {
+                heading: "OSPFv3 vs OSPFv2",
+                body: "OSPFv3 คือ OSPF Version ที่รองรับ IPv6 โดยเฉพาะ ต่างจาก OSPFv2 คือ Run บน Interface (ไม่ใช่ Network Statement), ใช้ Link-Local เป็น Next-hop, และรองรับ Multiple Address Family",
+              },
+            ],
+            diagramText: "R1(2001:db8:1::1) ←OSPFv3 Area 0→ R2(2001:db8:2::1)",
+            commands: [
+              { title: "Enable OSPFv3", command: "ipv6 router ospf 1\n router-id 1.1.1.1", description: "เปิด OSPFv3 Process และกำหนด Router-ID" },
+              { title: "Apply to Interface", command: "interface Gi0/0\n ipv6 ospf 1 area 0", description: "Enable OSPFv3 บน Interface" },
+              { title: "Verify Neighbors", command: "show ipv6 ospf neighbor", description: "ดู OSPFv3 Neighbor Adjacency" },
+            ],
+            commonMistakes: [
+              "ลืม Router-ID ทำให้ OSPFv3 ไม่ Start (ไม่มี IPv4 Interface ให้ Auto-assign)",
+              "ลืม ipv6 unicast-routing ก่อน Config OSPFv3",
+            ],
+            keyTakeaways: [
+              "OSPFv3 Config บน Interface ไม่ใช่ network statement",
+              "Router-ID ยังเป็น 32-bit IPv4 Format แม้ใช้ IPv6",
+            ],
+            summary: "OSPFv3 คือ OSPF Version สำหรับ IPv6 Config ต่างจาก OSPFv2 ตรงที่ Enable บน Interface",
+            prevLessonId: "ipv6-address-types",
+            nextLessonId: null,
+          },
+        ],
+      },
+    ],
+  },
+
+  /* ══════════════════════════════════════════════════════════════
+   * 12. QoS Fundamentals
+   * ══════════════════════════════════════════════════════════════ */
+  {
+    id:          "qos-fundamentals",
+    title:       "QoS (Quality of Service)",
+    description: "เรียนรู้หลักการ QoS, Classification, Marking, Queuing และ Shaping/Policing สำหรับ Voice, Video และ Data Traffic",
+    level:       "Intermediate",
+    category:    "QoS",
+    duration:    "5 hours",
+    progress:    0,
+    roleTarget:  "Network Engineer / UC Engineer",
+    relatedLabs: ["qos-dscp-lab"],
+    modules: [
+      {
+        id:          "qos-concepts",
+        title:       "QoS หลักการและ Classification",
+        description: "เข้าใจว่า QoS คืออะไรและทำงานอย่างไร",
+        lessons: [
+          {
+            id:       "qos-intro",
+            title:    "QoS คืออะไร และทำไมต้องใช้",
+            duration: "15 min",
+            type:     "lesson",
+            status:   "not-started",
+            objectives: [
+              "อธิบาย QoS และปัญหาที่แก้ได้",
+              "เข้าใจ Bandwidth, Delay, Jitter, Packet Loss",
+              "รู้จัก DSCP Marking และ Traffic Classes",
+            ],
+            content: [
+              {
+                heading: "ทำไมต้องใช้ QoS",
+                body: "บน Network เดียวกันมี Traffic หลายประเภท เช่น Voice, Video Conference, Web Browse และ File Download ถ้าไม่มี QoS, Network จะให้ Priority เท่าเทียมกันทั้งหมด ส่งผลให้ Voice Call สะดุดเมื่อมีคนโหลดไฟล์ใหญ่พร้อมกัน",
+              },
+              {
+                heading: "DSCP Marking",
+                body: "DSCP (Differentiated Services Code Point) คือ 6-bit Field ใน IP Header ที่ใช้ Mark Priority ของ Packet เช่น EF (46) สำหรับ Voice, AF41 (34) สำหรับ Video, CS0 (0) สำหรับ Best Effort",
+              },
+            ],
+            diagramText: "Voice(EF/46) → High Priority Queue | Video(AF41) → Medium Queue | Data(CS0) → Best Effort",
+            commands: [
+              { title: "Show QoS Policy", command: "show policy-map interface Gi0/0", description: "ดู QoS Policy ที่ Apply บน Interface" },
+              { title: "Check DSCP", command: "show ip access-lists | show class-map", description: "ดู Traffic Classification" },
+            ],
+            commonMistakes: [
+              "Mark QoS แค่ขา Outbound แต่ลืมขา Inbound",
+              "Overprovisioning Voice EF Queue ทำให้ Data Traffic굶 Starvation",
+            ],
+            keyTakeaways: [
+              "QoS ไม่ได้เพิ่ม Bandwidth แต่จัดลำดับการใช้ Bandwidth",
+              "Voice ต้องการ Delay < 150ms, Jitter < 30ms, Loss < 1%",
+            ],
+            summary: "QoS ใช้ DSCP Marking จัดลำดับ Traffic Priority เพื่อให้ Voice/Video มีคุณภาพแม้ Network ติด",
+            prevLessonId: null,
+            nextLessonId: "qos-mls-qos",
+          },
+          {
+            id:       "qos-mls-qos",
+            title:    "MQC (Modular QoS CLI) บน Cisco",
+            duration: "25 min",
+            type:     "lab",
+            status:   "not-started",
+            objectives: [
+              "เขียน QoS Policy ด้วย MQC (class-map, policy-map, service-policy)",
+              "Config DSCP Marking สำหรับ Voice Traffic",
+              "Apply QoS Policy บน Interface",
+            ],
+            content: [
+              {
+                heading: "MQC คืออะไร",
+                body: "MQC (Modular QoS CLI) คือวิธีการ Config QoS บน Cisco แบบ Modular ประกอบด้วย class-map (กำหนด Traffic), policy-map (กำหนด Action) และ service-policy (Apply Policy กับ Interface)",
+              },
+            ],
+            diagramText: "class-map VOICE → match dscp ef → policy-map QOS → class VOICE → priority 128 → service-policy out",
+            commands: [
+              { title: "Create Class-map", command: "class-map match-any VOICE\n match dscp ef", description: "จำแนก Voice Traffic ด้วย DSCP EF" },
+              { title: "Create Policy-map", command: "policy-map QOS_POLICY\n class VOICE\n  priority 128\n class class-default\n  fair-queue", description: "กำหนด Action สำหรับแต่ละ Class" },
+              { title: "Apply Service-policy", command: "interface Gi0/0\n service-policy output QOS_POLICY", description: "Apply QoS Policy บน Interface" },
+            ],
+            commonMistakes: [
+              "ลืม service-policy ทำให้ Policy ไม่ทำงานแม้ Config ครบ",
+            ],
+            keyTakeaways: [
+              "MQC แยก Classification (class-map) ออกจาก Policy (policy-map) ทำให้ Reuse ได้",
+            ],
+            summary: "MQC ใช้ class-map, policy-map, service-policy Config QoS แบบ Modular บน Cisco",
+            prevLessonId: "qos-intro",
+            nextLessonId: null,
+          },
+        ],
+      },
+    ],
+  },
+
+  /* ══════════════════════════════════════════════════════════════
+   * 13. Wireless LAN
+   * ══════════════════════════════════════════════════════════════ */
+  {
+    id:          "wireless-networking",
+    title:       "Wireless LAN Fundamentals",
+    description: "เรียนรู้ WiFi Standards, Frequency Bands, Security (WPA2/WPA3), Site Survey และ Troubleshoot ปัญหา WiFi",
+    level:       "Beginner",
+    category:    "Wireless",
+    duration:    "5 hours",
+    progress:    0,
+    roleTarget:  "Network Engineer / IT Support",
+    relatedLabs: ["wifi-security-lab"],
+    modules: [
+      {
+        id:          "wifi-basics",
+        title:       "WiFi พื้นฐาน",
+        description: "เข้าใจ IEEE 802.11 Standards และ Frequency Bands",
+        lessons: [
+          {
+            id:       "wifi-standards",
+            title:    "WiFi Standards & Frequency Bands",
+            duration: "20 min",
+            type:     "lesson",
+            status:   "not-started",
+            objectives: [
+              "แยก WiFi Standards: 802.11a/b/g/n/ac/ax ได้",
+              "เข้าใจความแตกต่าง 2.4 GHz vs 5 GHz",
+              "รู้จัก Non-overlapping Channels",
+            ],
+            content: [
+              {
+                heading: "WiFi Standards Timeline",
+                body: "802.11b (11 Mbps, 2.4GHz) → 802.11g (54 Mbps, 2.4GHz) → 802.11n/Wi-Fi4 (600 Mbps, Dual-band) → 802.11ac/Wi-Fi5 (6.9 Gbps, 5GHz) → 802.11ax/Wi-Fi6 (9.6 Gbps, Dual/Tri-band) → Wi-Fi7 (46 Gbps)",
+              },
+              {
+                heading: "2.4 GHz vs 5 GHz",
+                body: "2.4 GHz มี Range ไกลกว่า ทะลุกำแพงได้ดีกว่า แต่มี Channel น้อย (Ch 1, 6, 11 ไม่ซ้อน) และแออัด 5 GHz มี Speed สูงกว่า Channel เยอะกว่า แต่ Range สั้นกว่า ใช้สำหรับ Video Conference และ Gaming",
+              },
+            ],
+            diagramText: "2.4GHz: Ch1(2.412) Ch6(2.437) Ch11(2.462) — Non-overlapping | 5GHz: Ch36,40,44,48... — More channels",
+            commands: [
+              { title: "Show WiFi Info (Windows)", command: "netsh wlan show all", description: "ดูข้อมูล WiFi Network ทั้งหมด" },
+              { title: "Show Signal (Linux)", command: "iwconfig wlan0", description: "ดู Signal Strength และ Standard" },
+            ],
+            commonMistakes: [
+              "ตั้ง Channel Auto ทำให้ AP เลือก Channel ชนกัน",
+              "ใช้ 2.4 GHz สำหรับ Video Call ทำให้คุณภาพไม่ดีเมื่อมีคนมาก",
+            ],
+            keyTakeaways: [
+              "Wi-Fi6 (802.11ax) ดีกว่าเดิมใน Dense Environment ด้วย OFDMA",
+              "5 GHz เหมาะกับ Speed, 2.4 GHz เหมาะกับ Range",
+            ],
+            summary: "WiFi Standard มีหลาย Version ปัจจุบัน Wi-Fi6 เป็น Standard หลัก 5 GHz เร็วกว่า 2.4 GHz",
+            prevLessonId: null,
+            nextLessonId: "wifi-security",
+          },
+          {
+            id:       "wifi-security",
+            title:    "WiFi Security: WPA2/WPA3",
+            duration: "20 min",
+            type:     "lesson",
+            status:   "not-started",
+            objectives: [
+              "เปรียบเทียบ WEP, WPA, WPA2, WPA3",
+              "เข้าใจ 802.1X Authentication สำหรับ Enterprise WiFi",
+              "Config WPA3-SAE บน Access Point",
+            ],
+            content: [
+              {
+                heading: "WiFi Security Evolution",
+                body: "WEP (Broken ไม่ใช้แล้ว) → WPA (TKIP, ยังมีช่องโหว่) → WPA2 (AES-CCMP, มาตรฐาน Enterprise) → WPA3 (SAE ป้องกัน Dictionary Attack, PMF บังคับ) สำหรับ Enterprise ใช้ WPA2/WPA3-Enterprise + 802.1X + RADIUS",
+              },
+            ],
+            diagramText: "Client → WPA3-SAE Handshake → AP → 802.1X → RADIUS Server → Permit/Deny",
+            commands: [
+              { title: "Show WiFi Security (Linux)", command: "iwlist wlan0 scan | grep -E 'ESSID|Encryption|IE'", description: "ดู Security Type ของ WiFi ใกล้เคียง" },
+            ],
+            commonMistakes: [
+              "ยังใช้ WPA2-TKIP แทน AES — TKIP มีช่องโหว่",
+              "ไม่เปิด PMF (Protected Management Frames) ทำให้เสี่ยง Deauth Attack",
+            ],
+            keyTakeaways: [
+              "WPA3 บังคับ PMF และใช้ SAE แทน PSK ป้องกัน Offline Attack",
+              "Enterprise WiFi ควรใช้ 802.1X + RADIUS แทน Shared Password",
+            ],
+            summary: "WPA3 คือ WiFi Security Standard ล่าสุด Enterprise ควรใช้ 802.1X แทน Shared Key",
+            prevLessonId: "wifi-standards",
+            nextLessonId: null,
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 /* ─── Helpers ───────────────────────────────────────────────────── */

@@ -831,6 +831,349 @@ show ip access-lists
 show ip interface GigabitEthernet0/0`,
     roadmapLevel: 5,
   },
+
+  /* ══════════════════════════════════════════════════════════
+   * 9. BGP eBGP Configuration Lab
+   * ══════════════════════════════════════════════════════════ */
+  {
+    id:          "bgp-ebgp-config",
+    title:       "BGP eBGP Configuration Lab",
+    category:    "Routing",
+    level:       "Advanced",
+    duration:    "60 min",
+    status:      "not-started",
+    description: "ฝึก Config eBGP ระหว่าง 2 AS, ส่ง Network Prefix และตรวจสอบ BGP Table",
+    scenario:    "บริษัทต้องการเชื่อมต่อกับ ISP โดยใช้ BGP แทน Static Route เพื่อให้สามารถรับ Full Routing Table และ Control Traffic ได้",
+    objective:   "Config eBGP ระหว่าง AS 65001 (Enterprise) และ AS 65002 (ISP) และตรวจสอบการแลกเปลี่ยน Prefix",
+    devices:     ["R1 (AS 65001)", "R2 (AS 65002)"],
+    topology: [
+      { from: "R1", to: "R2", port: "Gi0/0 ↔ Gi0/0 (10.0.0.0/30)" },
+    ],
+    ipTable: [
+      { device: "R1", interface: "Gi0/0",    ip: "10.0.0.1",     subnet: "255.255.255.252", gateway: "-"       },
+      { device: "R1", interface: "Loopback0", ip: "192.168.1.0",  subnet: "255.255.255.0",   gateway: "-"       },
+      { device: "R2", interface: "Gi0/0",    ip: "10.0.0.2",     subnet: "255.255.255.252", gateway: "-"       },
+      { device: "R2", interface: "Loopback0", ip: "172.16.0.0",   subnet: "255.255.0.0",     gateway: "-"       },
+    ],
+    tasks: [
+      "Config IP Address บน R1 และ R2 ตาม IP Table",
+      "เริ่ม BGP Process บน R1: router bgp 65001",
+      "กำหนด eBGP Neighbor บน R1: neighbor 10.0.0.2 remote-as 65002",
+      "ประกาศ Network 192.168.1.0/24 จาก R1",
+      "Config BGP บน R2: router bgp 65002, neighbor 10.0.0.1 remote-as 65001",
+      "ประกาศ Network 172.16.0.0/16 จาก R2",
+      "ตรวจสอบ: show bgp summary — State ต้อง Established",
+      "ตรวจสอบ: show bgp ipv4 unicast — ดู Prefix จากทั้งสอง AS",
+    ],
+    hints: [
+      "eBGP Neighbor ต้อง Direct Connect (TTL=1 by default)",
+      "ถ้า State stuck ที่ Active ให้เช็ก IP Connectivity ก่อนด้วย ping",
+      "network command ใน BGP ต้องมี Route ใน Routing Table ก่อนถึงจะประกาศได้",
+    ],
+    expectedResult: "BGP Neighbor State Established, R1 เห็น 172.16.0.0/16 จาก R2 และ R2 เห็น 192.168.1.0/24 จาก R1 ใน BGP Table",
+    troubleshooting: [
+      "show bgp summary — ดู State และ Uptime",
+      "show bgp neighbors 10.0.0.2 — ดูรายละเอียด Neighbor",
+      "debug ip bgp 10.0.0.2 events — ดู BGP Events (ระวัง Production)",
+      "ping 10.0.0.2 — ตรวจ Connectivity ก่อน BGP",
+    ],
+    solution: `! R1 Configuration
+router bgp 65001
+ neighbor 10.0.0.2 remote-as 65002
+ network 192.168.1.0 mask 255.255.255.0
+
+! R2 Configuration
+router bgp 65002
+ neighbor 10.0.0.1 remote-as 65001
+ network 172.16.0.0 mask 255.255.0.0
+
+! Verify
+show bgp summary
+show bgp ipv4 unicast`,
+    roadmapLevel: 7,
+  },
+
+  /* ══════════════════════════════════════════════════════════
+   * 10. Python Netmiko Lab
+   * ══════════════════════════════════════════════════════════ */
+  {
+    id:          "python-netmiko-lab",
+    title:       "Python Netmiko Config Backup Lab",
+    category:    "Automation",
+    level:       "Advanced",
+    duration:    "45 min",
+    status:      "not-started",
+    description: "เขียน Python Script ด้วย Netmiko เพื่อ Backup running-config จาก Router หลายตัวพร้อมกัน",
+    scenario:    "ทีม Network ต้องการ Backup Config Router 3 ตัวทุกวันโดยอัตโนมัติ แทนการ Login ทีละเครื่อง",
+    objective:   "เขียน Script ที่ Loop Backup running-config จาก 3 Router และบันทึกลงไฟล์พร้อม Timestamp",
+    devices:     ["Python Workstation", "R1 (192.168.1.1)", "R2 (192.168.1.2)", "R3 (192.168.1.3)"],
+    topology: [
+      { from: "Workstation", to: "R1", port: "SSH Port 22" },
+      { from: "Workstation", to: "R2", port: "SSH Port 22" },
+      { from: "Workstation", to: "R3", port: "SSH Port 22" },
+    ],
+    ipTable: [
+      { device: "R1", interface: "Mgmt", ip: "192.168.1.1", subnet: "255.255.255.0", gateway: "192.168.1.254" },
+      { device: "R2", interface: "Mgmt", ip: "192.168.1.2", subnet: "255.255.255.0", gateway: "192.168.1.254" },
+      { device: "R3", interface: "Mgmt", ip: "192.168.1.3", subnet: "255.255.255.0", gateway: "192.168.1.254" },
+    ],
+    tasks: [
+      "ติดตั้ง Netmiko: pip install netmiko",
+      "สร้าง device_list ด้วย Dictionary สำหรับ Router ทั้ง 3 ตัว",
+      "เขียน Loop เชื่อมต่อแต่ละ Router ด้วย ConnectHandler",
+      "รัน send_command('show running-config') และเก็บ Output",
+      "บันทึกไฟล์ชื่อ {hostname}_{YYYYMMDD}.txt",
+      "เพิ่ม try/except ป้องกัน Script หยุดเมื่อ Device ไม่ตอบ",
+      "รัน Script และตรวจสอบว่ามีไฟล์ Backup ครบ 3 ไฟล์",
+    ],
+    hints: [
+      "device_type สำหรับ Cisco IOS คือ 'cisco_ios'",
+      "ใช้ datetime.now().strftime('%Y%m%d') สร้าง Date String",
+      "net_connect.find_prompt() ช่วยดึง Hostname จาก Router",
+    ],
+    expectedResult: "มีไฟล์ backup เช่น R1_20241215.txt, R2_20241215.txt, R3_20241215.txt ใน Directory",
+    troubleshooting: [
+      "NetMikoAuthenticationException — Username/Password ผิด",
+      "NetMikoTimeoutException — ไม่ถึง Device หรือ SSH ไม่ได้เปิด",
+      "ตรวจสอบ SSH บน Router: show ip ssh",
+    ],
+    solution: `from netmiko import ConnectHandler
+from datetime import datetime
+import os
+
+devices = [
+    {'device_type': 'cisco_ios', 'host': '192.168.1.1', 'username': 'admin', 'password': 'cisco'},
+    {'device_type': 'cisco_ios', 'host': '192.168.1.2', 'username': 'admin', 'password': 'cisco'},
+    {'device_type': 'cisco_ios', 'host': '192.168.1.3', 'username': 'admin', 'password': 'cisco'},
+]
+
+date_str = datetime.now().strftime('%Y%m%d')
+
+for device in devices:
+    try:
+        conn = ConnectHandler(**device)
+        hostname = conn.find_prompt().replace('#','').strip()
+        config = conn.send_command('show running-config')
+        filename = f"{hostname}_{date_str}.txt"
+        with open(filename, 'w') as f:
+            f.write(config)
+        print(f"✅ Backed up {hostname}")
+        conn.disconnect()
+    except Exception as e:
+        print(f"❌ Failed {device['host']}: {e}")`,
+    roadmapLevel: 8,
+  },
+
+  /* ══════════════════════════════════════════════════════════
+   * 11. IPv6 OSPFv3 Lab
+   * ══════════════════════════════════════════════════════════ */
+  {
+    id:          "ipv6-ospfv3-lab",
+    title:       "IPv6 OSPFv3 Configuration Lab",
+    category:    "IP Addressing",
+    level:       "Intermediate",
+    duration:    "45 min",
+    status:      "not-started",
+    description: "ฝึก Config IPv6 Address และ OSPFv3 บน Router 3 ตัว ให้ Ping IPv6 ข้าม Network ได้",
+    scenario:    "บริษัทต้องการ Migrate เป็น IPv6 Dual-Stack Router 3 ตัวต้องคุยกันได้ด้วย OSPFv3",
+    objective:   "Config IPv6 และ OSPFv3 Area 0 บน 3 Router และตรวจสอบการ Ping IPv6 ข้าม Network",
+    devices:     ["R1", "R2", "R3"],
+    topology: [
+      { from: "R1", to: "R2", port: "Gi0/0 ↔ Gi0/0" },
+      { from: "R2", to: "R3", port: "Gi0/1 ↔ Gi0/0" },
+    ],
+    ipTable: [
+      { device: "R1", interface: "Gi0/0",    ip: "2001:db8:12::1", subnet: "/64", gateway: "-" },
+      { device: "R1", interface: "Loopback0", ip: "2001:db8:1::1",  subnet: "/128",gateway: "-" },
+      { device: "R2", interface: "Gi0/0",    ip: "2001:db8:12::2", subnet: "/64", gateway: "-" },
+      { device: "R2", interface: "Gi0/1",    ip: "2001:db8:23::1", subnet: "/64", gateway: "-" },
+      { device: "R3", interface: "Gi0/0",    ip: "2001:db8:23::2", subnet: "/64", gateway: "-" },
+      { device: "R3", interface: "Loopback0", ip: "2001:db8:3::1",  subnet: "/128",gateway: "-" },
+    ],
+    tasks: [
+      "เปิด IPv6 Routing: ipv6 unicast-routing บนทุก Router",
+      "Config IPv6 Address บน Interface ทุกตัวตาม IP Table",
+      "เริ่ม OSPFv3: ipv6 router ospf 1 และกำหนด router-id บนทุก Router",
+      "Enable OSPFv3 บน Interface: ipv6 ospf 1 area 0",
+      "ตรวจสอบ: show ipv6 ospf neighbor — ต้องเห็น Full Adjacency",
+      "ตรวจสอบ: show ipv6 route — ต้องเห็น O routes ของ Network อื่น",
+      "Ping IPv6: ping 2001:db8:3::1 source 2001:db8:1::1 จาก R1",
+    ],
+    hints: [
+      "OSPFv3 Router-ID ต้องเป็น 32-bit IPv4 format เช่น 1.1.1.1",
+      "ถ้า Loopback ไม่มี IPv4 ต้องกำหนด router-id เองด้วย router-id 1.1.1.1",
+      "Link-Local Address เกิดขึ้นอัตโนมัติหลัง ipv6 enable",
+    ],
+    expectedResult: "R1 Ping 2001:db8:3::1 (R3 Loopback) ได้สำเร็จ OSPFv3 Neighbor Full บนทุก Link",
+    troubleshooting: [
+      "show ipv6 ospf neighbor — ดู Adjacency State",
+      "show ipv6 interface brief — ตรวจ IPv6 Address",
+      "debug ipv6 ospf hello — ดู Hello Packet",
+    ],
+    solution: `! ทุก Router
+ipv6 unicast-routing
+
+! R1
+interface Gi0/0
+ ipv6 address 2001:db8:12::1/64
+ ipv6 ospf 1 area 0
+interface Loopback0
+ ipv6 address 2001:db8:1::1/128
+ ipv6 ospf 1 area 0
+ipv6 router ospf 1
+ router-id 1.1.1.1
+
+! R2
+interface Gi0/0
+ ipv6 address 2001:db8:12::2/64
+ ipv6 ospf 1 area 0
+interface Gi0/1
+ ipv6 address 2001:db8:23::1/64
+ ipv6 ospf 1 area 0
+ipv6 router ospf 1
+ router-id 2.2.2.2
+
+! R3
+interface Gi0/0
+ ipv6 address 2001:db8:23::2/64
+ ipv6 ospf 1 area 0
+interface Loopback0
+ ipv6 address 2001:db8:3::1/128
+ ipv6 ospf 1 area 0
+ipv6 router ospf 1
+ router-id 3.3.3.3`,
+    roadmapLevel: 5,
+  },
+
+  /* ══════════════════════════════════════════════════════════
+   * 12. QoS DSCP Lab
+   * ══════════════════════════════════════════════════════════ */
+  {
+    id:          "qos-dscp-lab",
+    title:       "QoS DSCP Marking & Queuing Lab",
+    category:    "QoS",
+    level:       "Intermediate",
+    duration:    "40 min",
+    status:      "not-started",
+    description: "ฝึก Config QoS MQC บน Router Cisco เพื่อ Mark Voice Traffic (DSCP EF) และจัดลำดับ Priority",
+    scenario:    "บริษัทมี VoIP Phone และ Data Traffic ร่วม WAN Link เดียวกัน เมื่อมีการโหลดไฟล์ Voice Call สะดุด ต้องการ QoS แก้ปัญหา",
+    objective:   "Config MQC กำหนด Voice Traffic ใช้ Priority Queue และ Data ใช้ Fair Queue",
+    devices:     ["R1 (HQ)", "R2 (Branch)"],
+    topology: [
+      { from: "VoIP Phone", to: "R1", port: "LAN" },
+      { from: "R1", to: "R2", port: "WAN Gi0/1 ↔ Gi0/1 (10 Mbps)" },
+    ],
+    ipTable: [
+      { device: "R1", interface: "Gi0/0", ip: "192.168.1.1", subnet: "255.255.255.0", gateway: "-" },
+      { device: "R1", interface: "Gi0/1", ip: "10.1.1.1",    subnet: "255.255.255.252", gateway: "-" },
+      { device: "R2", interface: "Gi0/1", ip: "10.1.1.2",    subnet: "255.255.255.252", gateway: "-" },
+    ],
+    tasks: [
+      "สร้าง class-map VOICE: match dscp ef",
+      "สร้าง class-map VIDEO: match dscp af41",
+      "สร้าง policy-map WAN_QOS กำหนด Voice priority 1000kbps, Video bandwidth 3000kbps",
+      "Apply service-policy output WAN_QOS บน Gi0/1 ขา WAN",
+      "ตรวจสอบ: show policy-map interface Gi0/1",
+      "ทดสอบ simulate Voice Traffic และดู Queue Statistics",
+    ],
+    hints: [
+      "priority bandwidth ต้องไม่เกิน 33% ของ Interface Bandwidth โดยรวม",
+      "class-default ควรใช้ fair-queue หรือ bandwidth remaining",
+    ],
+    expectedResult: "show policy-map interface แสดง VOICE Class ใช้ Priority Queue, ไม่มี Drop ใน Voice",
+    troubleshooting: [
+      "show policy-map interface Gi0/1 — ดู Drop Counter",
+      "ถ้า Voice Drop สูง ลด Priority Bandwidth หรือเพิ่ม WAN Bandwidth",
+    ],
+    solution: `! R1 QoS Config
+class-map match-any VOICE
+ match dscp ef
+class-map match-any VIDEO
+ match dscp af41
+
+policy-map WAN_QOS
+ class VOICE
+  priority 1000
+ class VIDEO
+  bandwidth 3000
+ class class-default
+  fair-queue
+
+interface GigabitEthernet0/1
+ service-policy output WAN_QOS
+
+! Verify
+show policy-map interface GigabitEthernet0/1`,
+    roadmapLevel: 6,
+  },
+
+  /* ══════════════════════════════════════════════════════════
+   * 13. WiFi Security Lab
+   * ══════════════════════════════════════════════════════════ */
+  {
+    id:          "wifi-security-lab",
+    title:       "WiFi Security Configuration Lab",
+    category:    "Wireless",
+    level:       "Beginner",
+    duration:    "30 min",
+    status:      "not-started",
+    description: "ฝึก Config WiFi SSID, WPA3-Personal และแยก Guest Network ออกจาก Corporate Network",
+    scenario:    "บริษัทต้องการ WiFi แยกสำหรับพนักงานและ Guest โดยที่ Guest ไม่สามารถเข้าถึง Internal Network ได้",
+    objective:   "Config SSID 2 ตัว: Corp-WiFi (WPA3) และ Guest-WiFi (WPA2) พร้อม VLAN แยก",
+    devices:     ["Cisco WLC / AP", "Core Switch", "DHCP Server"],
+    topology: [
+      { from: "Corp-WiFi SSID", to: "VLAN 10", port: "802.1Q Trunk" },
+      { from: "Guest-WiFi SSID", to: "VLAN 20", port: "802.1Q Trunk" },
+      { from: "VLAN 20",  to: "Internet",  port: "Firewall Rule" },
+    ],
+    ipTable: [
+      { device: "VLAN 10 (Corp)",  interface: "SVI", ip: "10.10.10.0", subnet: "255.255.255.0", gateway: "-",  vlan: "10" },
+      { device: "VLAN 20 (Guest)", interface: "SVI", ip: "10.20.20.0", subnet: "255.255.255.0", gateway: "-",  vlan: "20" },
+    ],
+    tasks: [
+      "สร้าง VLAN 10 (Corp) และ VLAN 20 (Guest) บน Switch",
+      "Config Trunk Port ระหว่าง Switch และ AP",
+      "สร้าง SSID 'Corp-WiFi' → Mapped to VLAN 10, Security WPA3-SAE",
+      "สร้าง SSID 'Guest-WiFi' → Mapped to VLAN 20, Security WPA2-PSK",
+      "ตั้ง Firewall Rule: VLAN 20 Allow Internet, Deny 10.10.10.0/24",
+      "ทดสอบ Connect Corp-WiFi รับ IP จาก VLAN 10",
+      "ทดสอบ Connect Guest-WiFi รับ IP จาก VLAN 20 เข้า Internal ไม่ได้",
+    ],
+    hints: [
+      "AP Port ต้องเป็น Trunk Mode เพื่อรับหลาย VLAN",
+      "DHCP Pool ต้องแยกสำหรับ VLAN 10 และ VLAN 20",
+    ],
+    expectedResult: "Corp-WiFi ได้ 10.10.10.x, Guest-WiFi ได้ 10.20.20.x, Guest Ping 10.10.10.1 ไม่ผ่าน",
+    troubleshooting: [
+      "ถ้าไม่ได้รับ IP ตรวจสอบ DHCP Pool ว่า Map VLAN ถูกต้อง",
+      "show vlan brief บน Switch ตรวจสอบ VLAN Assignment",
+    ],
+    solution: `! Switch Config
+vlan 10
+ name Corporate
+vlan 20
+ name Guest
+
+interface GigabitEthernet0/1
+ description To-AP
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20
+
+! DHCP Config
+ip dhcp pool CORP
+ network 10.10.10.0 255.255.255.0
+ default-router 10.10.10.1
+
+ip dhcp pool GUEST
+ network 10.20.20.0 255.255.255.0
+ default-router 10.20.20.1
+
+! Firewall: Block Guest → Corporate
+ip access-list extended GUEST_ACL
+ deny ip 10.20.20.0 0.0.0.255 10.10.10.0 0.0.0.255
+ permit ip any any`,
+    roadmapLevel: 4,
+  },
 ];
 
 /* ─── Helpers ───────────────────────────────────────────────── */
