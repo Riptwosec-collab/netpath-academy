@@ -1,51 +1,59 @@
 /**
- * lib/rateLimit.ts
- * In-memory rate limiter for development/prototype.
- * Production: replace with Upstash Redis or Vercel KV.
+ * Simple in-memory rate limiter for API routes.
+ * Resets automatically per window.
  */
 
-type LimitEntry = { count: number; resetAt: number };
+interface RateLimitEntry {
+  count:   number;
+  resetAt: number;
+}
 
-const store = new Map<string, LimitEntry>();
+const store = new Map<string, RateLimitEntry>();
 
-type RateLimitOptions = {
-  limit:        number; // max requests
-  windowMs:     number; // time window in ms
-};
+interface RateLimitOptions {
+  /** Maximum requests per window */
+  limit:  number;
+  /** Window in milliseconds */
+  window: number;
+}
 
-type RateLimitResult = {
-  allowed:    boolean;
-  remaining:  number;
-  resetAt:    number;
-};
+export interface RateLimitResult {
+  allowed:   boolean;
+  remaining: number;
+  resetAt:   number;
+}
 
-export function checkRateLimit(
-  key: string,
-  { limit = 10, windowMs = 60_000 }: Partial<RateLimitOptions> = {}
+export function rateLimit(
+  key:     string,
+  options: RateLimitOptions = { limit: 10, window: 60_000 },
 ): RateLimitResult {
   const now = Date.now();
 
-  let entry = store.get(key);
+  // Clean up expired entries
+  Array.from(store.entries()).forEach(([k, v]) => {
+    if (v.resetAt < now) store.delete(k);
+  });
 
-  // Expired window — reset
+  const entry = store.get(key);
+
   if (!entry || entry.resetAt < now) {
-    entry = { count: 0, resetAt: now + windowMs };
-    store.set(key, entry);
+    // New window
+    const newEntry: RateLimitEntry = {
+      count:   1,
+      resetAt: now + options.window,
+    };
+    store.set(key, newEntry);
+    return { allowed: true, remaining: options.limit - 1, resetAt: newEntry.resetAt };
+  }
+
+  if (entry.count >= options.limit) {
+    return { allowed: false, remaining: 0, resetAt: entry.resetAt };
   }
 
   entry.count += 1;
+  store.set(key, entry);
 
-  const allowed   = entry.count <= limit;
-  const remaining = Math.max(0, limit - entry.count);
-
-  // Cleanup old keys periodically (simple GC)
-  if (store.size > 10_000) {
-    Array.from(store.entries()).forEach(([k, v]) => {
-      if (v.resetAt < now) store.delete(k);
-    });
-  }
-
-  return { allowed, remaining, resetAt: entry.resetAt };
+  return { allowed: true, remaining: options.limit - entry.count, resetAt: entry.resetAt };
 }
 
 /** Get client IP from Next.js request headers */

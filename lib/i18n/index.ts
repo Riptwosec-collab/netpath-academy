@@ -313,3 +313,7 @@ const th: Record<keyof typeof en, string> = {
 
 export type TranslationKey = keyof typeof en;
 export const translations: Record<Lang, Record<TranslationKey, string>> = { en, th };
+
+export function t(lang: Lang, key: TranslationKey): string {
+  return translations[lang][key] ?? translations.en[key] ?? key;
+}

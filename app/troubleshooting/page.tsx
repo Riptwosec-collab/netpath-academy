@@ -189,13 +189,7 @@ export default function TroubleshootingPage() {
       ) : (
         <div className="flex flex-col items-center gap-4 py-20">
           <AlertTriangle size={28} className="text-white/15" />
-          <p className="text-sm text-white/30">{t("trouble.empty")}</p>
-          <button
-            onClick={clearFilters}
-            className="px-4 py-2 rounded-xl border border-white/[0.08] text-xs text-white/40 hover:text-white/60 hover:border-white/20 transition-all"
-          >
-            {lang === "th" ? "ล้างตัวกรองทั้งหมด" : "Clear all filters"}
-          </button>
+          <p className="text-sm text-white/30">{t("No guides found matching your criteria.")}</p>
         </div>
       )}
     </div>

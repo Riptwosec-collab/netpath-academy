@@ -30,7 +30,6 @@ function CourseCard({ course }: { course: ContinueCourse }) {
         <span className={cn("text-xs font-bold flex-shrink-0", c.text)}>{course.progress}%</span>
       </div>
 
-      {/* Progress bar */}
       <div className="w-full h-1.5 bg-white/[0.07] rounded-full overflow-hidden mb-3">
         <div
           className="h-full rounded-full transition-all duration-500"
@@ -38,7 +37,6 @@ function CourseCard({ course }: { course: ContinueCourse }) {
         />
       </div>
 
-      {/* Next lesson */}
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] text-white/30 truncate">
           Next: <span className="text-white/50">{course.nextLesson}</span>

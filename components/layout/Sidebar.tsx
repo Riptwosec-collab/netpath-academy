@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Map, BookOpen, FlaskConical, Brain,
   Wrench, Bot, Trophy, FolderKanban, Network, Settings,
-  Wifi, type LucideIcon,
+  Wifi, GraduationCap, Layers, Terminal, Award, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +24,17 @@ const navGroups = [
       { href: "/courses",         label: "Courses",         Icon: BookOpen },
       { href: "/labs",            label: "Labs",            Icon: FlaskConical },
       { href: "/quiz",            label: "Quiz",            Icon: Brain },
+      { href: "/exam",            label: "Exam Center",     Icon: GraduationCap },
       { href: "/troubleshooting", label: "Troubleshooting", Icon: Wrench },
+    ],
+  },
+  {
+    label: "Reference",
+    items: [
+      { href: "/flashcards",    label: "Flashcards",    Icon: Layers   },
+      { href: "/commands",      label: "Commands",      Icon: Terminal  },
+      { href: "/skill-tree",    label: "Skill Tree",    Icon: Award     },
+      { href: "/certifications",label: "Certifications",Icon: GraduationCap },
     ],
   },
   {
@@ -135,7 +145,6 @@ export default function Sidebar() {
           href="/settings"
           label="Settings"
           Icon={Settings}
-          active={pathname === "/settings"}
         />
       </div>
     </aside>
