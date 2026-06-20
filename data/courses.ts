@@ -1407,3 +1407,12 @@ export function getLessonById(courseId: string, lessonId: string) {
   }
   return null;
 }
+
+export function getTotalLessons(course: Course): number {
+  return course.modules.reduce((sum, mod) => sum + mod.lessons.length, 0);
+}
+
+export function getCompletedLessons(_course: Course): number {
+  // placeholder — real completion tracked in user progress
+  return 0;
+}
