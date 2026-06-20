@@ -3,7 +3,5 @@
   "buildCommand": "npx prisma generate && npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "env": {
-    "NEXTAUTH_URL": "@nextauth_url"
-  }
+  "env": {}
 }
