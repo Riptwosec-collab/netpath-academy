@@ -1798,6 +1798,442 @@ interface Serial0/0
  ppp authentication chap`,
     roadmapLevel: 3,
   },
+  /* ══════════════════════════════════════════════════════════
+   * CROSS-TRACK LAB 1: OSPF + Python Automation
+   * ══════════════════════════════════════════════════════════ */
+  {
+    id:          "cross-ospf-automation",
+    title:       "OSPF + Netmiko Automation",
+    category:    "Cross-Track",
+    level:       "Advanced",
+    duration:    "90 min",
+    status:      "available",
+    description: "Deploy OSPF บน 4 Routers ด้วยมือ แล้ว Automate ด้วย Python + Netmiko — ดู Config Deploy เร็วขึ้น 10x",
+    scenario:    "Network Engineer ต้องเพิ่ม 4 Routers เข้า OSPF Area 0 โดย Push Config ให้ทุกตัวพร้อมกัน แทนที่จะ Config ทีละตัว",
+    objective:   "ทำให้ทุก Router exchange OSPF Routes แล้วเขียน Python Script deploy config อัตโนมัติ",
+    devices: ["R1", "R2", "R3", "R4", "Python-Host"],
+    topology: [
+      { from: "R1", to: "R2", port: "Gi0/0 ↔ Gi0/0" },
+      { from: "R2", to: "R3", port: "Gi0/1 ↔ Gi0/0" },
+      { from: "R3", to: "R4", port: "Gi0/1 ↔ Gi0/0" },
+      { from: "R4", to: "R1", port: "Gi0/1 ↔ Gi0/1" },
+    ],
+    ipTable: [
+      { device: "R1", interface: "Gi0/0", ip: "10.0.12.1", subnet: "255.255.255.0", gateway: "-" },
+      { device: "R2", interface: "Gi0/0", ip: "10.0.12.2", subnet: "255.255.255.0", gateway: "-" },
+      { device: "R2", interface: "Gi0/1", ip: "10.0.23.2", subnet: "255.255.255.0", gateway: "-" },
+      { device: "R3", interface: "Gi0/1", ip: "10.0.23.3", subnet: "255.255.255.0", gateway: "-" },
+    ],
+    tasks: [
+      "Phase 1 — Manual: Config IP + OSPF Area 0 บนทุก Router",
+      "verify: show ip ospf neighbor — ทุกตัวเป็น FULL",
+      "Phase 2 — Automation: ติดตั้ง netmiko (pip install netmiko)",
+      "เขียน devices.yaml: list ของ Router IP + credentials",
+      "เขียน ospf_deploy.py: loop ผ่านทุก device, push config",
+      "รัน Script และ verify ผลลัพธ์เหมือน Manual",
+      "Bonus: เขียน ospf_verify.py ดึง show ip ospf neighbor แล้ว parse",
+    ],
+    hints: [
+      "ใช้ send_config_set() ส่ง list of commands ไปยัง Router",
+      "ThreadPoolExecutor ทำให้ push ทุก Router พร้อมกัน",
+      "ใช้ ConnectHandler(device_type='cisco_ios', host=...) สำหรับ IOS",
+    ],
+    expectedResult: "OSPF Full Mesh บน 4 Routers, Python Script ที่ Deploy config ได้ใน < 30 วิ",
+    troubleshooting: [
+      "Netmiko connection timeout: ตรวจ SSH enable + credentials",
+      "OSPF ไม่ขึ้น: ตรวจ network statement ครอบ interface IP",
+      "Script error: ตรวจ indentation ใน send_config_set list",
+    ],
+    solution: `# ospf_deploy.py
+from netmiko import ConnectHandler
+from concurrent.futures import ThreadPoolExecutor
+
+devices = [
+    {"host": "10.0.0.1", "username": "cisco", "password": "cisco", "device_type": "cisco_ios"},
+    {"host": "10.0.0.2", "username": "cisco", "password": "cisco", "device_type": "cisco_ios"},
+]
+
+ospf_config = [
+    "router ospf 1",
+    "router-id {rid}",
+    "network 10.0.0.0 0.255.255.255 area 0",
+]
+
+def deploy(device):
+    with ConnectHandler(**device) as net:
+        output = net.send_config_set(ospf_config)
+        print(f"{device['host']}: {output}")
+
+with ThreadPoolExecutor(max_workers=4) as pool:
+    pool.map(deploy, devices)`,
+    roadmapLevel: 4,
+  },
+
+  /* ══════════════════════════════════════════════════════════
+   * CROSS-TRACK LAB 2: VLAN + Security Hardening
+   * ══════════════════════════════════════════════════════════ */
+  {
+    id:          "cross-vlan-security",
+    title:       "VLAN Segmentation + Security Hardening",
+    category:    "Cross-Track",
+    level:       "Advanced",
+    duration:    "75 min",
+    status:      "available",
+    description: "สร้าง VLAN Segmentation แล้วใส่ ACL + Port Security ป้องกัน Lateral Movement ระหว่าง VLAN",
+    scenario:    "บริษัทถูก Audit พบว่า HR VLAN และ Finance VLAN สื่อสารกันได้โดยไม่มี Control — ต้อง Segment และใส่ ACL ป้องกัน",
+    objective:   "แยก VLANs ด้วย Inter-VLAN Routing แล้วใส่ ACL บล็อก Cross-VLAN ที่ไม่ได้รับอนุญาต + Port Security",
+    devices: ["Core-SW", "Access-SW1", "Access-SW2", "PC-HR", "PC-Finance", "PC-IT"],
+    topology: [
+      { from: "Core-SW",    to: "Access-SW1", port: "Trunk" },
+      { from: "Core-SW",    to: "Access-SW2", port: "Trunk" },
+      { from: "Access-SW1", to: "PC-HR",      port: "VLAN 10" },
+      { from: "Access-SW1", to: "PC-Finance", port: "VLAN 20" },
+      { from: "Access-SW2", to: "PC-IT",      port: "VLAN 99" },
+    ],
+    ipTable: [
+      { device: "Core-SW SVI", interface: "VLAN 10",  ip: "10.10.10.1",  subnet: "255.255.255.0", gateway: "-" },
+      { device: "Core-SW SVI", interface: "VLAN 20",  ip: "10.20.20.1",  subnet: "255.255.255.0", gateway: "-" },
+      { device: "Core-SW SVI", interface: "VLAN 99",  ip: "10.99.99.1",  subnet: "255.255.255.0", gateway: "-" },
+      { device: "PC-HR",       interface: "NIC",       ip: "10.10.10.10", subnet: "255.255.255.0", gateway: "10.10.10.1" },
+    ],
+    tasks: [
+      "สร้าง VLANs 10 (HR), 20 (Finance), 99 (IT) บน Core-SW",
+      "สร้าง SVI + Inter-VLAN Routing บน Core-SW",
+      "Config Trunk Port ระหว่าง Switches",
+      "Config Access Ports บน Access-SW",
+      "ทดสอบ: PC-HR ping PC-Finance ผ่านได้ (ก่อน ACL)",
+      "สร้าง Extended ACL: Deny HR→Finance, Deny Finance→HR, Permit IT→All",
+      "Apply ACL บน SVI VLAN 10 (inbound) และ VLAN 20 (inbound)",
+      "Enable Port Security บน Access Ports: max 1 MAC, violation shutdown",
+      "ทดสอบ: PC-HR ping PC-Finance ต้องไม่ผ่าน; IT ping ทุกที่ผ่าน",
+    ],
+    hints: [
+      "ACL ต้อง Apply บน SVI Interface (ไม่ใช่ Physical Port)",
+      "ip access-group ACL_NAME in บน SVI ของ Source VLAN",
+      "Port Security: switchport port-security maximum 1 + violation shutdown",
+    ],
+    expectedResult: "HR ไม่สามารถ ping Finance ได้ / Finance ไม่สามารถ ping HR / IT เข้าถึงได้ทุก VLAN",
+    troubleshooting: [
+      "ACL ไม่ทำงาน: ตรวจ apply direction ถูก Interface",
+      "Inter-VLAN ไม่ Route: ตรวจ ip routing enable + SVI up/up",
+      "Port Security err-disable: show interfaces status + recover",
+    ],
+    solution: `! Core-SW
+vlan 10
+ name HR
+vlan 20
+ name Finance
+vlan 99
+ name IT
+
+interface vlan 10
+ ip address 10.10.10.1 255.255.255.0
+ ip access-group ACL_HR in
+ no shutdown
+
+ip access-list extended ACL_HR
+ deny ip 10.10.10.0 0.0.0.255 10.20.20.0 0.0.0.255
+ permit ip any any
+
+! Port Security (Access-SW)
+interface fa0/1
+ switchport mode access
+ switchport access vlan 10
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security violation shutdown`,
+    roadmapLevel: 3,
+  },
+
+  /* ══════════════════════════════════════════════════════════
+   * CROSS-TRACK LAB 3: BGP + Route Policy
+   * ══════════════════════════════════════════════════════════ */
+  {
+    id:          "cross-bgp-policy",
+    title:       "BGP Multi-homed + Route Policy",
+    category:    "Cross-Track",
+    level:       "Advanced",
+    duration:    "90 min",
+    status:      "available",
+    description: "Dual-homed ไป 2 ISP ด้วย eBGP + ใช้ AS-PATH Prepend และ Local Preference ควบคุม Inbound/Outbound Traffic",
+    scenario:    "บริษัทมี 2 ISP (Primary 1Gbps, Secondary 500Mbps) ต้องการ Outbound ผ่าน Primary, Inbound ผ่าน Primary เช่นกัน แต่ Failover อัตโนมัติ",
+    objective:   "Config eBGP Dual-homed พร้อม Policy ควบคุม Traffic Path",
+    devices: ["CE-Router", "ISP1-Router", "ISP2-Router"],
+    topology: [
+      { from: "CE-Router", to: "ISP1-Router", port: "Gi0/0 ↔ Gi0/0 (AS 65001 ↔ AS 100)" },
+      { from: "CE-Router", to: "ISP2-Router", port: "Gi0/1 ↔ Gi0/0 (AS 65001 ↔ AS 200)" },
+    ],
+    ipTable: [
+      { device: "CE-Router", interface: "Gi0/0", ip: "203.0.113.2",  subnet: "255.255.255.252", gateway: "-" },
+      { device: "CE-Router", interface: "Gi0/1", ip: "198.51.100.2", subnet: "255.255.255.252", gateway: "-" },
+      { device: "ISP1",      interface: "Gi0/0", ip: "203.0.113.1",  subnet: "255.255.255.252", gateway: "-" },
+      { device: "ISP2",      interface: "Gi0/0", ip: "198.51.100.1", subnet: "255.255.255.252", gateway: "-" },
+    ],
+    tasks: [
+      "Config eBGP: CE ↔ ISP1 (AS 100), CE ↔ ISP2 (AS 200)",
+      "Advertise 192.0.2.0/24 (Company Prefix) ไปทั้ง 2 ISP",
+      "ตรวจ: show ip bgp summary — ทั้งสอง Peer เป็น Established",
+      "Outbound Policy: Local Preference 200 สำหรับ Route จาก ISP1 (Primary)",
+      "Inbound Policy: AS-PATH Prepend บน ISP2 Outbound — เพิ่ม AS ซ้ำ 3 ครั้ง",
+      "ทดสอบ Failover: Shutdown ISP1 Link — Traffic ต้องย้ายไป ISP2",
+      "Verify: show ip bgp — Best Path เปลี่ยนไป ISP2",
+    ],
+    hints: [
+      "Local Preference สูงชนะ — ใช้กับ Routes รับเข้ามาจาก ISP",
+      "AS-PATH Prepend: set as-path prepend 65001 65001 65001 ใน Route-Map",
+      "ip bgp-community new-format สำหรับ Community Display",
+    ],
+    expectedResult: "Primary ISP ใช้งาน Outbound+Inbound; ถ้า Primary Down Failover ไป Secondary อัตโนมัติ < 30 วิ",
+    troubleshooting: [
+      "BGP ไม่ Establish: ตรวจ AS Number ถูกต้อง, neighbor IP Reachable",
+      "Route ไม่ถูก Advertise: ตรวจ network statement หรือ redistribute",
+      "Policy ไม่ทำงาน: ตรวจ route-map apply บน neighbor ถูกทิศทาง",
+    ],
+    solution: `! CE-Router BGP Configuration
+router bgp 65001
+ bgp router-id 1.1.1.1
+ neighbor 203.0.113.1 remote-as 100
+ neighbor 203.0.113.1 route-map SET_LOCPREF_HIGH in
+ neighbor 198.51.100.1 remote-as 200
+ neighbor 198.51.100.1 route-map PREPEND_OUT out
+ network 192.0.2.0 mask 255.255.255.0
+
+route-map SET_LOCPREF_HIGH permit 10
+ set local-preference 200
+
+route-map PREPEND_OUT permit 10
+ set as-path prepend 65001 65001 65001`,
+    roadmapLevel: 4,
+  },
+
+  /* ══════════════════════════════════════════════════════════
+   * CROSS-TRACK LAB 4: Full Network Deploy (Capstone)
+   * ══════════════════════════════════════════════════════════ */
+  {
+    id:          "cross-full-deploy",
+    title:       "Capstone: Full Enterprise Network Deploy",
+    category:    "Cross-Track",
+    level:       "Advanced",
+    duration:    "120 min",
+    status:      "available",
+    description: "Deploy Enterprise Network ทั้งระบบ: VLAN + STP + OSPF + BGP + NAT + ACL + DHCP ใน Lab เดียว",
+    scenario:    "สร้าง Network ให้ SME 200 พนักงาน มี 3 Department VLAN, ISP Connection, DHCP, ACL Security และ Internet Access",
+    objective:   "ทดสอบความสามารถรวมทุก Foundation Skills ในการ Deploy Network จริง",
+    devices: ["Core-SW", "Access-SW", "Edge-Router", "ISP-Router", "PC x4", "Server"],
+    topology: [
+      { from: "Edge-Router", to: "ISP-Router",  port: "WAN Gi0/0" },
+      { from: "Edge-Router", to: "Core-SW",     port: "Trunk Gi0/1" },
+      { from: "Core-SW",     to: "Access-SW",   port: "Trunk" },
+      { from: "Access-SW",   to: "PCs",         port: "Access VLAN 10/20/30" },
+    ],
+    ipTable: [
+      { device: "Edge-Router WAN", interface: "Gi0/0",  ip: "203.0.113.2",  subnet: "255.255.255.252", gateway: "203.0.113.1" },
+      { device: "Core-SW SVI 10",  interface: "VLAN10",  ip: "10.10.10.1",   subnet: "255.255.255.0",   gateway: "-" },
+      { device: "Core-SW SVI 20",  interface: "VLAN20",  ip: "10.20.20.1",   subnet: "255.255.255.0",   gateway: "-" },
+      { device: "Core-SW SVI 30",  interface: "VLAN30",  ip: "10.30.30.1",   subnet: "255.255.255.0",   gateway: "-" },
+    ],
+    tasks: [
+      "Phase 1 — Layer 2: สร้าง VLANs 10/20/30, Trunk, STP Root",
+      "Phase 2 — Layer 3: SVI + Inter-VLAN Routing, DHCP Pools",
+      "Phase 3 — WAN: eBGP หรือ Static Default Route ไป ISP",
+      "Phase 4 — NAT: PAT บน Edge Router สำหรับ Internet Access",
+      "Phase 5 — Security: ACL บล็อก VLAN 10 ไม่ให้เข้า VLAN 20",
+      "Phase 6 — Verify: ทุก PC Ping Internet (8.8.8.8), ตรวจ ACL, ตรวจ DHCP",
+      "Bonus: Deploy Config ด้วย Ansible Playbook",
+    ],
+    hints: [
+      "ทำทีละ Phase อย่ากระโดด",
+      "Verify ทุก Phase ก่อนไป Phase ถัดไป",
+      "ip routing ต้อง Enable บน Layer 3 Switch",
+    ],
+    expectedResult: "ทุก PC ได้ IP จาก DHCP, Ping Internet ได้, ACL ทำงาน, STP Root ถูก Switch",
+    troubleshooting: [
+      "Internet ไม่ได้: ตรวจ NAT, Default Route, ISP Reachability",
+      "DHCP ไม่แจก: ตรวจ ip helper-address บน SVI",
+      "Inter-VLAN ไม่ Route: ตรวจ ip routing + SVI up",
+    ],
+    solution: `! ── Edge Router ──
+interface gi0/0
+ ip address 203.0.113.2 255.255.255.252
+ ip nat outside
+ no shutdown
+
+interface gi0/1
+ no ip address
+ no shutdown
+
+ip route 0.0.0.0 0.0.0.0 203.0.113.1
+
+ip nat inside source list NAT_ACL interface gi0/0 overload
+ip access-list standard NAT_ACL
+ permit 10.0.0.0 0.255.255.255
+
+! ── Core-SW (Layer 3) ──
+ip routing
+vlan 10
+vlan 20
+vlan 30
+
+interface vlan 10
+ ip address 10.10.10.1 255.255.255.0
+ ip helper-address 10.10.10.1
+ no shutdown
+
+ip dhcp pool VLAN10
+ network 10.10.10.0 255.255.255.0
+ default-router 10.10.10.1
+ dns-server 8.8.8.8`,
+    roadmapLevel: 5,
+  },
+
+  /* ══════════════════════════════════════════════════════════
+   * CROSS-TRACK LAB 5: IPv6 + DHCPv6
+   * ══════════════════════════════════════════════════════════ */
+  {
+    id:          "cross-ipv6-dhcpv6",
+    title:       "IPv6 Dual-Stack + DHCPv6",
+    category:    "Cross-Track",
+    level:       "Intermediate",
+    duration:    "60 min",
+    status:      "available",
+    description: "Deploy Dual-Stack Network ทั้ง IPv4 และ IPv6 พร้อมกัน — SLAAC สำหรับ Client + Stateful DHCPv6 สำหรับ Servers",
+    scenario:    "บริษัทเตรียม IPv6 Migration — ต้องให้ทั้ง IPv4 และ IPv6 ทำงานพร้อมกัน Client ใช้ SLAAC, Server ใช้ DHCPv6 Stateful",
+    objective:   "Config Dual-Stack บน Router + Switch + ทดสอบ Connectivity ทั้งสอง Protocol Stack",
+    devices: ["R1", "SW1", "PC1", "PC2", "Server1"],
+    topology: [
+      { from: "R1",  to: "SW1",     port: "Gi0/0 — LAN Segment" },
+      { from: "SW1", to: "PC1",     port: "Access Port" },
+      { from: "SW1", to: "PC2",     port: "Access Port" },
+      { from: "SW1", to: "Server1", port: "Access Port" },
+    ],
+    ipTable: [
+      { device: "R1",     interface: "Gi0/0", ip: "192.168.1.1 / 2001:db8:1::1", subnet: "/24 + /64", gateway: "-" },
+      { device: "PC1",    interface: "NIC",   ip: "DHCP / SLAAC",                subnet: "/24 + /64", gateway: "R1" },
+      { device: "Server1",interface: "NIC",   ip: "192.168.1.10 / DHCPv6-Static", subnet: "/24 + /64", gateway: "R1" },
+    ],
+    tasks: [
+      "Enable ipv6 unicast-routing บน R1",
+      "Assign IPv4 + IPv6 Address บน R1 Gi0/0",
+      "Config IPv4 DHCP Pool บน R1",
+      "Config DHCPv6 Stateful Pool สำหรับ Server1",
+      "Config DHCPv6 Stateless + SLAAC สำหรับ PC1/PC2",
+      "ทดสอบ: PC1 ping PC2 ด้วย IPv4 และ IPv6",
+      "ทดสอบ: PC1 ping R1 Link-local (FE80::1)",
+      "show ipv6 neighbors — ดู NDP Cache",
+    ],
+    hints: [
+      "ipv6 nd other-config-flag สำหรับ Stateless DHCPv6",
+      "ipv6 nd managed-config-flag สำหรับ Stateful DHCPv6",
+      "Link-local Address สร้างอัตโนมัติเมื่อ IPv6 enable บน Interface",
+    ],
+    expectedResult: "PC Dual-Stack ได้ทั้ง IPv4 และ IPv6 Address, ping ผ่านทั้งสองโปรโตคอล",
+    troubleshooting: [
+      "SLAAC ไม่ได้ IPv6: ตรวจ ipv6 unicast-routing + RA ไม่ถูก suppress",
+      "DHCPv6 ไม่แจก: ตรวจ ipv6 dhcp pool + interface กำหนด pool",
+      "ping6 ไม่ผ่าน: ตรวจ Firewall ไม่บล็อก ICMPv6",
+    ],
+    solution: `! R1 Dual-Stack Configuration
+ipv6 unicast-routing
+
+interface GigabitEthernet0/0
+ ip address 192.168.1.1 255.255.255.0
+ ipv6 address 2001:db8:1::1/64
+ ipv6 address FE80::1 link-local
+ ipv6 nd managed-config-flag
+ ipv6 dhcp server DHCPv6_POOL
+ no shutdown
+
+ipv6 dhcp pool DHCPv6_POOL
+ address prefix 2001:db8:1::/64
+ dns-server 2001:4860:4860::8888
+ domain-name lab.local
+
+! IPv4 DHCP
+ip dhcp pool LAN
+ network 192.168.1.0 255.255.255.0
+ default-router 192.168.1.1
+ dns-server 8.8.8.8`,
+    roadmapLevel: 3,
+  },
+
+  /* ══════════════════════════════════════════════════════════
+   * CROSS-TRACK LAB 6: QoS + Network Monitoring
+   * ══════════════════════════════════════════════════════════ */
+  {
+    id:          "cross-qos-monitoring",
+    title:       "QoS + SNMP/Syslog Monitoring",
+    category:    "Cross-Track",
+    level:       "Advanced",
+    duration:    "75 min",
+    status:      "available",
+    description: "Config QoS สำหรับ Voice Priority แล้ว Monitor ด้วย SNMP + Syslog — เห็น QoS Drops และ Interface Stats แบบ Real-time",
+    scenario:    "NOC ต้องการเห็น QoS Statistics แบบ Real-time: Voice Drops, Interface Utilization และ Alerts ผ่าน Syslog เมื่อ Queue Drop",
+    objective:   "Config LLQ QoS + ส่ง SNMP Traps และ Syslog ไปยัง Monitoring Server",
+    devices: ["WAN-Router", "LAN-Switch", "Monitoring-Server", "IP-Phone", "PC"],
+    topology: [
+      { from: "WAN-Router",      to: "ISP",               port: "WAN Gi0/0" },
+      { from: "WAN-Router",      to: "LAN-Switch",        port: "LAN Gi0/1" },
+      { from: "LAN-Switch",      to: "IP-Phone",          port: "Voice VLAN 50" },
+      { from: "LAN-Switch",      to: "PC",                port: "Data VLAN 10" },
+      { from: "LAN-Switch",      to: "Monitoring-Server", port: "Mgmt VLAN 99" },
+    ],
+    ipTable: [
+      { device: "WAN-Router", interface: "Gi0/0", ip: "203.0.113.2",  subnet: "255.255.255.252", gateway: "-" },
+      { device: "WAN-Router", interface: "Gi0/1", ip: "10.10.0.1",    subnet: "255.255.255.0",   gateway: "-" },
+      { device: "Mon-Server", interface: "NIC",   ip: "10.99.99.10",  subnet: "255.255.255.0",   gateway: "10.99.99.1" },
+    ],
+    tasks: [
+      "Phase 1 — QoS: สร้าง Class-Map สำหรับ Voice (DSCP EF) + Data",
+      "สร้าง Policy-Map: Voice LLQ 2Mbps + Data CBWFQ 8Mbps",
+      "Apply Service-Policy บน WAN Interface (Outbound)",
+      "Phase 2 — SNMP: Config SNMP v2c + Community string",
+      "กำหนด snmp-server host 10.99.99.10 traps",
+      "Enable SNMP Traps: interface, QoS drops",
+      "Phase 3 — Syslog: logging host 10.99.99.10",
+      "logging trap informational",
+      "Verify: show policy-map interface, show snmp, show logging",
+    ],
+    hints: [
+      "class-map match-any VOICE; match dscp ef",
+      "snmp-server community PUBLIC ro สำหรับ Read-only",
+      "logging buffered 16384 สำหรับ Local Buffer",
+    ],
+    expectedResult: "QoS Policy Active บน WAN Interface, SNMP Traps ส่งไป Monitoring Server, Syslog Stream เข้า Server",
+    troubleshooting: [
+      "QoS ไม่ทำงาน: ตรวจ service-policy apply ถูก direction",
+      "SNMP ไม่ตอบ: ตรวจ Community String + ACL ที่อาจบล็อก UDP 161",
+      "Syslog ไม่มา: ตรวจ logging host IP ถูก + UDP 514 ไม่ถูกบล็อก",
+    ],
+    solution: `! QoS Configuration
+class-map match-any VOICE
+ match dscp ef
+class-map match-any VIDEO
+ match dscp af41
+
+policy-map WAN_QOS
+ class VOICE
+  priority 2000
+ class VIDEO
+  bandwidth 4000
+ class class-default
+  fair-queue
+
+interface gi0/0
+ service-policy output WAN_QOS
+
+! SNMP
+snmp-server community PUBLIC ro
+snmp-server host 10.99.99.10 traps PUBLIC
+snmp-server enable traps interface
+snmp-server enable traps config
+
+! Syslog
+logging host 10.99.99.10
+logging trap informational
+logging buffered 16384`,
+    roadmapLevel: 4,
+  },
+
 ];
 
 export const labCategories = Array.from(new Set(labs.map((l) => l.category)));
