@@ -81,11 +81,11 @@ export default function TroubleshootingPage() {
               <p className="text-[10px] text-white/30">{lang === "th" ? "ทั้งหมด" : "Total"}</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-rose-400">{guideStats.critical}</p>
+              <p className="text-2xl font-bold text-rose-400">{guideStats.bySeverity.Critical}</p>
               <p className="text-[10px] text-white/30">Critical</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-orange-400">{guideStats.high}</p>
+              <p className="text-2xl font-bold text-orange-400">{guideStats.bySeverity.High}</p>
               <p className="text-[10px] text-white/30">High</p>
             </div>
           </div>
@@ -189,7 +189,7 @@ export default function TroubleshootingPage() {
       ) : (
         <div className="flex flex-col items-center gap-4 py-20">
           <AlertTriangle size={28} className="text-white/15" />
-          <p className="text-sm text-white/30">{t("No guides found matching your criteria.")}</p>
+          <p className="text-sm text-white/30">"ไม่พบ Guide ที่ตรงกับเงื่อนไข"</p>
         </div>
       )}
     </div>

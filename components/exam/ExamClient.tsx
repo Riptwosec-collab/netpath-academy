@@ -103,7 +103,7 @@ export default function ExamClient({ exam }: { exam: Exam }) {
   const handleExpire = useCallback(() => submitExam(), []);
 
   const { display: timerDisplay, pct: timerPct, secs: timerSecs } = useTimer(
-    exam.timeLimit,
+    (exam.timeLimit ?? 60),
     handleExpire,
   );
 
@@ -158,7 +158,7 @@ export default function ExamClient({ exam }: { exam: Exam }) {
           <div className="grid grid-cols-3 gap-3 text-center">
             {[
               { label: "Questions",   value: exam.questions.length },
-              { label: "Time Limit",  value: `${exam.timeLimit} min` },
+              { label: "Time Limit",  value: `${(exam.timeLimit ?? 60)} min` },
               { label: "Pass Score",  value: `${exam.passingScore}%` },
             ].map(i => (
               <div key={i.label} className="rounded-xl border border-white/[0.06] bg-white/[0.03] py-3">
@@ -207,7 +207,7 @@ export default function ExamClient({ exam }: { exam: Exam }) {
             "text-sm font-semibold px-4 py-2 rounded-lg inline-block",
             passed ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/10 text-rose-400",
           )}>
-            {passed ? `✅ ผ่าน! — ${exam.certName}` : `❌ ไม่ผ่าน — ต้องการ ${exam.passingScore}%`}
+            {passed ? `✅ ผ่าน! — ${(exam.certName ?? '')}` : `❌ ไม่ผ่าน — ต้องการ ${exam.passingScore}%`}
           </div>
         </div>
 
@@ -220,7 +220,7 @@ export default function ExamClient({ exam }: { exam: Exam }) {
             <CertSVG
               name="You"
               examTitle={exam.title}
-              certName={exam.certName}
+              certName={(exam.certName ?? '')}
               score={score}
               date={today}
             />

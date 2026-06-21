@@ -533,6 +533,202 @@ const ospfLesson: Lesson = {
   order: 6,
 };
 
+const bgpLesson: Lesson = {
+  id: "found-007",
+  slug: "bgp-basic",
+  title: "BGP Basic",
+  titleTh: "BGP พื้นฐาน",
+  track: "foundation",
+  category: "routing",
+  level: "Intermediate",
+  duration: "90 min",
+  xp: 125,
+  description: "เรียนรู้ BGP (Border Gateway Protocol) — eBGP vs iBGP, Neighbor Setup, Path Attributes, Best Path Selection และ Route Filtering",
+  objectives: [
+    "อธิบาย BGP ทำงานอย่างไรและใช้ที่ไหน",
+    "Configure eBGP Neighbor ระหว่าง Router สองตัวได้",
+    "เข้าใจ BGP Path Attributes: AS Path, Local Preference, MED",
+    "เขียน Basic Route Filtering ด้วย Prefix-list และ Route-map",
+  ],
+  prerequisites: ["ospf"],
+  concepts: ["BGP", "eBGP", "iBGP", "AS", "ASN", "Neighbor", "TCP 179", "NLRI", "UPDATE", "OPEN", "KEEPALIVE", "AS Path", "Local Preference", "MED", "Weight", "Next-hop", "Prefix-list", "Route-map", "BGP Best Path"],
+  mermaidDiagram: `graph LR
+    subgraph AS65001 ["AS 65001 (Company)"]
+      R1["R1\n10.0.0.1"]
+      R2["R2\n10.0.0.2"]
+      R1 ---|"iBGP"| R2
+    end
+    subgraph AS65000 ["AS 65000 (ISP A)"]
+      ISP_A["ISP-A\n1.1.1.1"]
+    end
+    subgraph AS65002 ["AS 65002 (ISP B)"]
+      ISP_B["ISP-B\n2.2.2.2"]
+    end
+    R1 ---|"eBGP"| ISP_A
+    R2 ---|"eBGP"| ISP_B`,
+  trafficFlow: [
+    "BGP TCP Session สร้างบน Port 179",
+    "Router แลกเปลี่ยน OPEN Message ตกลง Parameters",
+    "ส่ง UPDATE Message พร้อม NLRI (Network Layer Reachability Info)",
+    "BGP Best Path Selection ดู Attribute: Weight → Local Pref → AS Path → MED → ...",
+    "Inject Best Route ลง Routing Table",
+  ],
+  commands: [
+    { command: "router bgp 65001\nneighbor 1.1.1.1 remote-as 65000", description: "Config eBGP Neighbor กับ ISP-A" },
+    { command: "neighbor 1.1.1.1 description ISP-A\nneighbor 1.1.1.1 soft-reconfiguration inbound", description: "เพิ่ม Description และ Soft-reconfig" },
+    { command: "show bgp summary", description: "ดู BGP Neighbor Status ทั้งหมด" },
+    { command: "show bgp ipv4 unicast", description: "ดู BGP Table" },
+    { command: "show bgp ipv4 unicast 0.0.0.0", description: "ดู Default Route จาก BGP" },
+    { command: "clear ip bgp * soft", description: "Soft Reset BGP โดยไม่ drop Session" },
+    { command: "debug ip bgp 1.1.1.1 updates", description: "Debug BGP Updates กับ Neighbor" },
+  ],
+  labs: [
+    {
+      title: "eBGP Dual-homed ISP Lab",
+      level: "Intermediate",
+      estimatedMinutes: 75,
+      steps: [
+        "Topology: R1 (AS65001) เชื่อม ISP-A (AS65000) และ ISP-B (AS65002)",
+        "Config eBGP Neighbor บน R1 กับทั้ง ISP-A และ ISP-B",
+        "รับ Default Route 0.0.0.0/0 จากทั้งสอง ISP",
+        "ตรวจสอบ show bgp summary — ทั้งคู่ต้อง Established",
+        "ใช้ Local Preference ให้ ISP-A เป็น Primary (LP=200) ISP-B เป็น Backup (LP=100)",
+        "ทดสอบ Failover โดยปิด ISP-A Interface — ตรวจว่า Traffic ย้ายไป ISP-B",
+        "เพิ่ม Prefix-list กรอง Received Routes จาก ISP",
+      ],
+      verification: [
+        "show bgp summary: ทั้งคู่ Established",
+        "show bgp ipv4 unicast: Best path ไป ISP-A (LP=200)",
+        "หลัง Failover: Best path เปลี่ยนไป ISP-B ภายใน 60 วินาที",
+      ],
+    },
+  ],
+  troubleshooting: [
+    {
+      symptom: "BGP Neighbor ค้างที่ Active State",
+      possibleCause: "TCP 179 ถูก Block, IP ผิด, หรือ ASN ผิด",
+      check: "telnet <neighbor-ip> 179, show bgp neighbors, ตรวจ Firewall",
+      fix: "เปิด Port 179, ตรวจ remote-as ว่าตรงกับ Neighbor จริง",
+    },
+    {
+      symptom: "BGP Up แต่ไม่ได้รับ Route",
+      possibleCause: "Prefix-list หรือ Route-map Filter บล็อก, หรือ Neighbor ไม่ได้ Advertise",
+      check: "show bgp neighbors <ip> received-routes, show bgp neighbors <ip> advertised-routes",
+      fix: "ตรวจ Filter Policy, เพิ่ม neighbor soft-reconfiguration inbound",
+    },
+    {
+      symptom: "BGP Flapping ต่อเนื่อง",
+      possibleCause: "Link ไม่เสถียร, MTU mismatch, หรือ Keepalive Timeout",
+      check: "show bgp neighbors ดู Flap Count, ดู Interface Error",
+      fix: "ตรวจ Physical Link, แก้ MTU, เพิ่ม Keepalive Timer",
+    },
+  ],
+  quiz: [
+    makeQ("BGP ใช้ TCP Port ใด?", ["80", "179", "443", "8080"], "179", "BGP สร้าง TCP Session บน Port 179 ระหว่าง Neighbor ทั้งสอง — ต้องเปิด Firewall ให้ Port นี้"),
+    makeQ("eBGP กับ iBGP ต่างกันอย่างไร?", ["Speed ต่างกัน", "eBGP เชื่อม AS ต่างกัน iBGP เชื่อมภายใน AS เดียวกัน", "iBGP ปลอดภัยกว่า", "eBGP ใช้ UDP"], "eBGP เชื่อม AS ต่างกัน iBGP เชื่อมภายใน AS เดียวกัน", "eBGP = external BGP (ระหว่าง AS); iBGP = internal BGP (ภายใน AS เดียว) — iBGP ไม่แก้ Next-hop ให้อัตโนมัติ"),
+    makeQ("BGP Best Path Selection ดู Attribute ใดก่อน (Cisco)?", ["AS Path", "Local Preference", "Weight", "MED"], "Weight", "Cisco BGP Best Path: Weight (สูงสุดชนะ) → Local Pref → Local Origin → AS Path (สั้นสุดชนะ) → Origin → MED → eBGP vs iBGP → IGP Metric"),
+    makeQ("AS Path Prepend ใช้ทำอะไร?", ["เพิ่ม Security", "ทำให้ Route ดูมี AS Hop เยอะขึ้นเพื่อลด Priority", "เพิ่ม Bandwidth", "ลด Latency"], "ทำให้ Route ดูมี AS Hop เยอะขึ้นเพื่อลด Priority", "AS Path Prepend เพิ่ม ASN ซ้ำๆ ใน AS Path ทำให้ Route ดูยาวขึ้น BGP ของ Peer จะชอบ Path สั้นกว่า — ใช้ Influence Inbound Traffic"),
+    makeQ("Local Preference ใช้ Control อะไร?", ["Inbound Traffic จาก Internet", "Outbound Traffic จาก AS ตัวเอง", "MTU ของ BGP Session", "AS Number"], "Outbound Traffic จาก AS ตัวเอง", "Local Preference ใช้ภายใน AS — บอกทุก Router ใน AS ว่าควรใช้ Exit Point ไหนออก ค่าสูงกว่าชนะ"),
+  ],
+  interviewQuestions: [
+    makeI("Junior", "BGP ต่างจาก OSPF อย่างไร?", "BGP: Path Vector, เชื่อม AS ต่างกัน (Internet), Policy-based, ช้า Converge; OSPF: Link-State, ภายใน AS, Fast Converge, Cost-based — BGP สำหรับ ISP/Enterprise Internet Edge; OSPF สำหรับ Internal Routing"),
+    makeI("Mid", "อธิบาย BGP Best Path Selection ให้ครบ", "Weight(Cisco) → Local Pref → Local Origin → AS Path Length → Origin(IGP<EGP<?) → MED → eBGP>iBGP → IGP Metric → Router ID — จำย่อ: We Love Oranges As Oranges Mean Pure Refreshment"),
+    makeI("Senior", "ออกแบบ Dual-homed ISP BGP สำหรับ Enterprise อย่างไร?", "1) รับ Full Table หรือ Default Only จาก ISP (ขึ้นกับ Memory/CPU); 2) ใช้ Local Pref กำหนด Primary/Backup ขาออก; 3) ใช้ AS Path Prepend หรือ MED กำหนด Inbound; 4) Filter bogon/private prefixes; 5) BFD เพื่อ Fast Detection; 6) Route Dampening ป้องกัน Flap"),
+  ],
+  tags: ["BGP", "Routing", "eBGP", "iBGP", "AS Path", "Internet", "ISP"],
+  order: 7,
+};
+
+const firewallAcl: Lesson = {
+  id: "found-008",
+  slug: "firewall-nat-acl",
+  title: "Firewall, NAT & ACL",
+  titleTh: "Firewall, NAT และ ACL",
+  track: "foundation",
+  category: "security",
+  level: "Intermediate",
+  duration: "75 min",
+  xp: 100,
+  description: "เรียนรู้ ACL (Standard/Extended), NAT/PAT, Stateful Firewall และ Zone-Based Firewall — พื้นฐานที่ Network Engineer ต้องรู้",
+  objectives: [
+    "เขียน Standard และ Extended ACL ได้",
+    "Config NAT/PAT บน Router ได้",
+    "อธิบาย Stateful Firewall ทำงานอย่างไร",
+    "ออกแบบ Basic Firewall Zone Policy ได้",
+  ],
+  prerequisites: ["ipv4-addressing", "vlan"],
+  concepts: ["ACL", "Standard ACL", "Extended ACL", "Named ACL", "NAT", "PAT", "Static NAT", "Dynamic NAT", "Inside Local", "Inside Global", "Stateful Firewall", "Zone-Based Firewall", "DMZ", "Stateless vs Stateful"],
+  mermaidDiagram: `graph LR
+    subgraph Inside ["Inside (192.168.1.0/24)"]
+      PC["💻 PC\n192.168.1.10"]
+    end
+    subgraph FW ["Firewall / Router"]
+      NAT["NAT/PAT\nInside→Outside"]
+      ACL["ACL\nInbound/Outbound"]
+    end
+    subgraph Outside ["Outside (Internet)"]
+      WEB["🌐 Web Server"]
+    end
+    subgraph DMZ ["DMZ (10.0.0.0/24)"]
+      SRV["🖥️ Public Server\n10.0.0.10"]
+    end
+    PC --> ACL --> NAT --> WEB
+    WEB -->|"Static NAT → SRV"| SRV`,
+  commands: [
+    { command: "ip access-list extended BLOCK_TELNET\ndeny tcp any any eq 23\npermit ip any any", description: "Extended ACL บล็อก Telnet" },
+    { command: "interface Fa0/0\nip access-group BLOCK_TELNET in", description: "Apply ACL บน Interface" },
+    { command: "ip nat inside source list 1 interface Fa0/1 overload", description: "Config PAT (NAT Overload)" },
+    { command: "ip nat inside source static 192.168.1.10 203.0.113.10", description: "Config Static NAT" },
+    { command: "show ip nat translations", description: "ดู NAT Translation Table" },
+    { command: "show ip access-lists", description: "ดู ACL Counter" },
+  ],
+  labs: [
+    {
+      title: "NAT/PAT + ACL Lab",
+      level: "Intermediate",
+      estimatedMinutes: 50,
+      steps: [
+        "Topology: PC (192.168.1.0/24) → Router → Internet (203.0.113.0/24)",
+        "Config PAT: ให้ PC ทั้ง Subnet ออก Internet ผ่าน IP เดียว",
+        "ทดสอบ: PC ping 8.8.8.8 ผ่าน NAT",
+        "ดู NAT Table: show ip nat translations",
+        "สร้าง ACL อนุญาตเฉพาะ HTTP/HTTPS ออก Internet บล็อก Telnet",
+        "Apply ACL บน Inside Interface (inbound)",
+        "ทดสอบ: HTTP ผ่าน, Telnet ถูกบล็อก",
+      ],
+      verification: ["NAT Table แสดง Translation", "ping 8.8.8.8 สำเร็จ", "Telnet ถูกปฏิเสธ (ACL Hit Counter เพิ่ม)"],
+    },
+  ],
+  troubleshooting: [
+    {
+      symptom: "NAT ไม่ทำงาน — PC ออก Internet ไม่ได้",
+      possibleCause: "NAT Inside/Outside Interface ไม่ได้ Set, หรือ ACL ที่ใช้กับ NAT ไม่ Match",
+      check: "show ip nat translations, debug ip nat, ตรวจ ip nat inside/outside บน Interface",
+      fix: "เพิ่ม ip nat inside บน LAN Interface, ip nat outside บน WAN Interface",
+    },
+    {
+      symptom: "ACL บล็อก Traffic ที่ไม่ต้องการบล็อก",
+      possibleCause: "ACL มี Implicit Deny any any ท้ายสุด หรือ Sequence ผิด",
+      check: "show ip access-lists ดู Hit Counter, ตรวจ Order ของ ACE",
+      fix: "เพิ่ม permit ip any any ท้าย ACL ถ้าต้องการ, จัดลำดับ ACE ให้ถูก",
+    },
+  ],
+  quiz: [
+    makeQ("Standard ACL Match อะไร?", ["Source IP เท่านั้น", "Source + Destination IP", "Port Number", "Protocol"], "Source IP เท่านั้น", "Standard ACL (1-99, 1300-1999) Match เฉพาะ Source IP — ควร Apply ใกล้ Destination; Extended ACL Match ทั้ง Src/Dst IP + Port"),
+    makeQ("PAT ต่างจาก NAT อย่างไร?", ["PAT เร็วกว่า", "PAT ให้ IP หลายตัว Map กับ Public IP เดียวโดยใช้ Port ต่าง", "NAT ไม่ต้องการ IP", "ไม่มีความแตกต่าง"], "PAT ให้ IP หลายตัว Map กับ Public IP เดียวโดยใช้ Port ต่าง", "PAT = Port Address Translation (NAT Overload) ใช้ Port Number แยกแต่ละ Session ทำให้หลายร้อย PC ใช้ Public IP เดียวได้"),
+    makeQ("Stateful Firewall ต่างจาก ACL อย่างไร?", ["Stateful เร็วกว่า", "Stateful ติดตาม Connection State — Return Traffic ผ่านอัตโนมัติ", "ACL ปลอดภัยกว่า", "ไม่มีความแตกต่าง"], "Stateful ติดตาม Connection State — Return Traffic ผ่านอัตโนมัติ", "Stateful Firewall เก็บ Connection Table — เมื่ออนุญาต Outbound ก็อนุญาต Return Traffic อัตโนมัติ ACL ธรรมดาต้องเขียน Rule สองทิศทาง"),
+    makeQ("DMZ ใช้สำหรับอะไร?", ["เก็บ Database ลับ", "วาง Server ที่ต้องเข้าถึงจาก Internet แต่แยกจาก Internal", "เชื่อม WAN", "Backup Zone"], "วาง Server ที่ต้องเข้าถึงจาก Internet แต่แยกจาก Internal", "DMZ (Demilitarized Zone) คือ Segment กลาง วาง Web Server, Mail Server ที่ Internet เข้าถึงได้ แต่แยกออกจาก Internal LAN"),
+    makeQ("ip nat inside source list ใช้ทำอะไร?", ["Block NAT", "กำหนดว่า IP ไหน (ใน ACL) จะถูก Translate", "ดู NAT Table", "ล้าง NAT Table"], "กำหนดว่า IP ไหน (ใน ACL) จะถูก Translate", "คำสั่งนี้เลือก Source IP ที่จะ Translate โดยอ้าง ACL และกำหนด Interface หรือ IP สำหรับ Outside"),
+  ],
+  interviewQuestions: [
+    makeI("Junior", "อธิบายความแตกต่าง Standard vs Extended ACL", "Standard (1-99): Match แค่ Source IP, Apply ใกล้ Destination; Extended (100-199): Match Src+Dst IP+Port+Protocol, Apply ใกล้ Source — Extended ยืดหยุ่นกว่า ใช้บ่อยกว่า"),
+    makeI("Mid", "อธิบาย Implicit Deny ใน ACL และผลกระทบ", "ทุก ACL มี 'deny any any' ท้ายสุดที่มองไม่เห็น — ถ้าไม่มี permit any any ท้าย ACL Traffic ที่ไม่ Match Rule ใดจะถูก Drop ทั้งหมด ทำให้ Network Down โดยไม่ตั้งใจ"),
+    makeI("Senior", "ออกแบบ Firewall Policy สำหรับ 3-Tier Architecture (Inside/DMZ/Outside)", "Zone Policy Matrix: Outside→DMZ=Allow HTTPS/443 เท่านั้น; Outside→Inside=Deny all; DMZ→Inside=Allow specific ports (DB); Inside→DMZ=Allow admin ports; Inside→Outside=Allow HTTP/HTTPS; ใช้ Stateful ตลอด + IPS บน DMZ"),
+  ],
+  tags: ["ACL", "NAT", "PAT", "Firewall", "DMZ", "Security", "Foundation"],
+  order: 8,
+};
+
 // ─── Foundation Categories ────────────────────────────────────────
 export const foundationCategories: FoundationCategory[] = [
   {
@@ -568,7 +764,7 @@ export const foundationCategories: FoundationCategory[] = [
     titleTh: "Routing",
     icon: "🗺️",
     description: "Static Route, OSPF, EIGRP, BGP Basic, Route Policy",
-    lessons: [ospfLesson],
+    lessons: [ospfLesson, bgpLesson],
     order: 4,
   },
   {
@@ -577,7 +773,7 @@ export const foundationCategories: FoundationCategory[] = [
     titleTh: "Firewall และ VPN",
     icon: "🔒",
     description: "NAT, ACL, Firewall, IPSec VPN พื้นฐาน",
-    lessons: [],
+    lessons: [firewallAcl],
     order: 5,
   },
   {

@@ -77,8 +77,8 @@ describe("calculateSubnet", () => {
     expect(result.subnetMask).toBe("255.255.255.0");
     expect(result.totalHosts).toBe(256);
     expect(result.usableHosts).toBe(254);
-    expect(result.firstHost).toBe("192.168.1.1");
-    expect(result.lastHost).toBe("192.168.1.254");
+    expect((result as any).firstHost).toBe("192.168.1.1");
+    expect((result as any).lastHost).toBe("192.168.1.254");
   });
 
   it("calculates 10.0.0.0/8 correctly", () => {

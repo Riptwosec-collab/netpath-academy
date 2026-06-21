@@ -27,7 +27,7 @@ const deviceColor = (name: string): string => {
 export default function LabTopology({ lab }: { lab: Lab }) {
   /* Collect unique nodes */
   const nodeSet = new Set<string>();
-  lab.topology.forEach((l) => { nodeSet.add(l.from); nodeSet.add(l.to); });
+  (Array.isArray(lab.topology) ? lab.topology : (lab.topology.links ?? [])).forEach((l) => { nodeSet.add(l.from); nodeSet.add(l.to); });
   const nodes = Array.from(nodeSet);
 
   return (
@@ -76,7 +76,7 @@ export default function LabTopology({ lab }: { lab: Lab }) {
         <p className="text-[10px] uppercase tracking-wider text-white/25 font-medium mb-2">
           การเชื่อมต่อ
         </p>
-        {lab.topology.map((link, i) => (
+        {(Array.isArray(lab.topology) ? lab.topology : (lab.topology.links ?? [])).map((link, i) => (
           <div
             key={i}
             className="flex items-center gap-2 text-xs text-white/45 font-mono py-1.5 px-3

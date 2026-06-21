@@ -71,14 +71,14 @@ export default function LabCard({ lab }: { lab: Lab }) {
 
       {/* Devices */}
       <div className="flex flex-wrap gap-1 relative z-10">
-        {lab.devices.slice(0, 4).map((d) => (
+        {(lab.devices ?? []).slice(0, 4).map((d) => (
           <span key={d} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.05] text-white/30 border border-white/[0.06]">
             {d}
           </span>
         ))}
-        {lab.devices.length > 4 && (
+        {(lab.devices?.length ?? 0) > 4 && (
           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.05] text-white/20">
-            +{lab.devices.length - 4}
+            +{(lab.devices?.length ?? 0) - 4}
           </span>
         )}
       </div>

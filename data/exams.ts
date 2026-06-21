@@ -13,11 +13,12 @@ export interface Exam {
   category:     string;
   description:  string;
   level:        "Beginner" | "Intermediate" | "Advanced";
-  timeLimit:    number;        // minutes
+  timeLimit?:   number;        // minutes
   passingScore: number;        // percentage
-  questions:    ExamQuestion[];
-  certName:     string;
-  icon:         string;
+  duration?:        string | number;
+    questions:    ExamQuestion[];
+  certName?:    string;
+  icon?:        string;
   relatedCourse?: string;
 }
 

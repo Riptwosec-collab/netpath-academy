@@ -64,3 +64,6 @@ export function getClientIp(request: Request): string {
     "unknown"
   );
 }
+
+// Alias for backward compatibility
+export const checkRateLimit = rateLimit;

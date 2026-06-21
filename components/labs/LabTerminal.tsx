@@ -129,7 +129,7 @@ export default function LabTerminal({
     setLines(prev => [
       ...prev,
       { kind: "prompt", text: `${hostname}# ${cmd}` },
-      ...(output ? [{ kind: matched ? "output" : "error" as const, text: output }] : []),
+      ...(output ? [{ kind: (matched ? "output" : "error") as "output" | "error", text: output }] : []),
     ]);
     setInput("");
   }

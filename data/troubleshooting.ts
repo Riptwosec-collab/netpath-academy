@@ -11,12 +11,20 @@ export interface TroubleshootingCommand {
 }
 
 export interface TroubleshootingFlowStep {
-  step:           number;
-  title:          string;
-  description:    string;
-  checkCommand?:  string;
-  expectedResult: string;
-  ifFailed:       string;
+  id?:             string;
+  step?:           number;
+  question?:       string;
+  label?:          string;
+  title?:          string;
+  description?:    string;
+  expectedResult?: string;
+  ifFailed?:       string;
+  checkCommand?:   string;
+  yes?:            string;
+  no?:             string;
+  next?:           string;
+  type?:           string;
+  action?:         string;
 }
 
 export interface DecisionTreeNode {
@@ -26,12 +34,14 @@ export interface DecisionTreeNode {
 }
 
 export interface RcaTemplate {
-  incidentTitle: string;
-  impact:        string;
-  timeline:      string[];
-  rootCause:     string;
-  resolution:    string;
-  prevention:    string[];
+  incidentTitle?: string;
+  problem?:       string;
+  impact?:        string;
+  timeline?:      string[];
+  rootCause?:     string;
+  resolution?:    string;
+  fixApplied?:    string;
+  prevention?:    string | string[];
 }
 
 export interface TroubleshootingGuide {
@@ -41,18 +51,18 @@ export interface TroubleshootingGuide {
   severity:            TroubleshootingSeverity;
   level:               TroubleshootingLevel;
   description:         string;
-  symptoms:            string[];
-  possibleCauses:      string[];
-  flowSteps:           TroubleshootingFlowStep[];
-  commands:            TroubleshootingCommand[];
-  decisionTree:        DecisionTreeNode[];
-  rootCauseExamples:   string[];
-  fixActions:          string[];
-  verificationSteps:   string[];
-  escalation:          string[];
-  rcaTemplate:         RcaTemplate;
-  relatedLabs:         string[];
-  relatedCourses:      string[];
+  symptoms?: string[];
+  possibleCauses?: string[];
+  flowSteps?: TroubleshootingFlowStep[];
+  commands?:  Array<TroubleshootingCommand | string>;
+  decisionTree?: DecisionTreeNode[];
+  rootCauseExamples?: string[];
+  fixActions?: string[];
+  verificationSteps?: string[];
+  escalation?: string[];
+  rcaTemplate?: RcaTemplate;
+  relatedLabs?: string[];
+  relatedCourses?: string[];
 }
 
 /* ─── Data ──────────────────────────────────────────────────────── */
@@ -186,7 +196,7 @@ export const troubleshootingGuides: TroubleshootingGuide[] = [
         "ทำ Post-check หลัง Change ทุกครั้ง",
       ],
     },
-    relatedLabs:    ["basic-ip", "dhcp-troubleshoot"],
+    relatedLabs: ["basic-ip", "dhcp-troubleshoot"],
     relatedCourses: ["network-fundamentals", "network-troubleshooting"],
   },
 
@@ -266,7 +276,7 @@ export const troubleshootingGuides: TroubleshootingGuide[] = [
       resolution: "เปลี่ยน Channel AP เป็น Channel 11 และลด Power ลง 3 dB",
       prevention: ["ทำ RF Survey ทุก 6 เดือน", "ตั้ง Auto-RF บน WLC", "ตรวจ Channel Utilization ผ่าน Monitoring"],
     },
-    relatedLabs:    [],
+    relatedLabs: [],
     relatedCourses: ["network-fundamentals", "network-troubleshooting"],
   },
 
@@ -347,7 +357,7 @@ export const troubleshootingGuides: TroubleshootingGuide[] = [
       resolution: "สร้าง VLAN 30 บน Switch ใหม่และ Verify Trunk",
       prevention: ["สร้าง Switch Deployment Checklist", "ใช้ VTP (ถ้าเหมาะสม)", "ทดสอบ VLAN ทุกตัวหลัง Deployment"],
     },
-    relatedLabs:    ["vlan-config", "trunk-port"],
+    relatedLabs: ["vlan-config", "trunk-port"],
     relatedCourses: ["switching-essentials", "vlan-trunk"],
   },
 
@@ -427,7 +437,7 @@ export const troubleshootingGuides: TroubleshootingGuide[] = [
       resolution: "เพิ่ม IP Range จาก /24 เป็น /23 และ Clear Lease เก่า",
       prevention: ["ตั้ง Alert เมื่อ DHCP ใช้เกิน 80%", "Review DHCP Scope ทุกไตรมาส"],
     },
-    relatedLabs:    ["dhcp-troubleshoot"],
+    relatedLabs: ["dhcp-troubleshoot"],
     relatedCourses: ["network-fundamentals", "network-troubleshooting"],
   },
 
@@ -496,7 +506,7 @@ export const troubleshootingGuides: TroubleshootingGuide[] = [
       resolution: "แก้ DNS IP ใน DHCP Scope และ Renew IP ทุกเครื่อง",
       prevention: ["สร้าง Migration Checklist", "Test DNS จาก Client ทุกจุดหลัง Migrate"],
     },
-    relatedLabs:    ["basic-ip"],
+    relatedLabs: ["basic-ip"],
     relatedCourses: ["network-fundamentals", "network-troubleshooting"],
   },
 
@@ -559,7 +569,7 @@ export const troubleshootingGuides: TroubleshootingGuide[] = [
       resolution: "แก้ VLAN บน Switch Port เป็น VLAN ที่ถูกต้อง",
       prevention: ["ตรวจ Switch Config ก่อนและหลัง Test", "ใช้ Change Management"],
     },
-    relatedLabs:    ["basic-ip"],
+    relatedLabs: ["basic-ip"],
     relatedCourses: ["network-fundamentals", "routing-fundamentals"],
   },
 
@@ -626,7 +636,7 @@ export const troubleshootingGuides: TroubleshootingGuide[] = [
       resolution: "เพิ่ม Firewall Rule Allow UDP 500 และ 4500 สำหรับ VPN",
       prevention: ["Export และ Verify Firewall Rule ก่อน Upgrade", "Test VPN หลัง Firewall Change ทุกครั้ง"],
     },
-    relatedLabs:    ["acl-basic", "nat-basic"],
+    relatedLabs: ["acl-basic", "nat-basic"],
     relatedCourses: ["firewall-acl"],
   },
 
@@ -695,7 +705,7 @@ export const troubleshootingGuides: TroubleshootingGuide[] = [
       resolution: "ย้าย Backup Job กลับไปรัน 23:00 และตั้ง QoS Rate-Limit",
       prevention: ["ทำ Change Management สำหรับ Backup Schedule", "ตั้ง Alert เมื่อ BW เกิน 80%"],
     },
-    relatedLabs:    [],
+    relatedLabs: [],
     relatedCourses: ["network-troubleshooting"],
   },
 
@@ -763,7 +773,7 @@ export const troubleshootingGuides: TroubleshootingGuide[] = [
       resolution: "เปลี่ยน SFP Module ใหม่",
       prevention: ["ตรวจ Interface Error ผ่าน Monitoring ทุก 5 นาที", "สำรอง SFP Module พร้อมใช้งาน"],
     },
-    relatedLabs:    [],
+    relatedLabs: [],
     relatedCourses: ["network-troubleshooting"],
   },
 
@@ -837,7 +847,7 @@ export const troubleshootingGuides: TroubleshootingGuide[] = [
       resolution: "ถอด Unmanaged Switch และสายที่ Loop ออก และเปิด BPDU Guard",
       prevention: ["ตั้ง BPDU Guard บน Access Port ทุก Port", "ห้ามผู้ใช้นำ Switch มาเสียบเอง", "ตั้ง Port Security", "Monitor STP TC Count"],
     },
-    relatedLabs:    ["vlan-config", "trunk-port"],
+    relatedLabs: ["vlan-config", "trunk-port"],
     relatedCourses: ["switching-essentials", "vlan-trunk"],
   },
 
@@ -888,3 +898,18 @@ export const guideCategories = Array.from(new Set(troubleshootingGuides.map((g) 
 export function getGuideById(id: string) {
   return troubleshootingGuides.find((g) => g.id === id);
 }
+
+export const guideStats = {
+  total: troubleshootingGuides.length,
+  byLevel: {
+    Beginner:     troubleshootingGuides.filter(g => g.level === "Beginner").length,
+    Intermediate: troubleshootingGuides.filter(g => g.level === "Intermediate").length,
+    Advanced:     troubleshootingGuides.filter(g => g.level === "Advanced").length,
+  },
+  bySeverity: {
+    Low:      troubleshootingGuides.filter(g => g.severity === "Low").length,
+    Medium:   troubleshootingGuides.filter(g => g.severity === "Medium").length,
+    High:     troubleshootingGuides.filter(g => g.severity === "High").length,
+    Critical: troubleshootingGuides.filter(g => g.severity === "Critical").length,
+  },
+};

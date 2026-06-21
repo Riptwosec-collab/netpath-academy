@@ -1,7 +1,7 @@
 /* ─── Types ─────────────────────────────────────────────────────── */
 export type CourseLevel  = "Beginner" | "Intermediate" | "Advanced";
 export type LessonStatus = "completed" | "in-progress" | "not-started" | "locked";
-export type LessonType   = "lesson" | "lab" | "quiz";
+export type LessonType   = "lesson" | "lab" | "quiz" | "video";
 
 export interface ContentSection {
   heading: string;
@@ -15,27 +15,29 @@ export interface CommandItem {
 }
 
 export interface Lesson {
-  id:             string;
-  title:          string;
-  duration:       string;
-  type:           LessonType;
-  status:         LessonStatus;
-  objectives:     string[];
-  content:        ContentSection[];
-  diagramText:    string;
-  commands:       CommandItem[];
-  commonMistakes: string[];
-  keyTakeaways:   string[];
-  summary:        string;
-  prevLessonId:   string | null;
-  nextLessonId:   string | null;
+  id:              string;
+  title:           string;
+  duration:        string;
+  type?:           LessonType;
+  status?:         LessonStatus;
+  objectives?:     string[];
+  content?:        ContentSection[] | string[];
+  diagramText?:    string;
+  commands?:       CommandItem[] | string[];
+  commonMistakes?: string[];
+  keyTakeaways?:   string[];
+  summary?:        string;
+  prevLessonId?:   string | null;
+  nextLessonId?:   string | null;
+  completed?:      boolean;
 }
 
 export interface CourseModule {
-  id:          string;
-  title:       string;
-  description: string;
-  lessons:     Lesson[];
+  id:           string;
+  title:        string;
+  description?: string;
+  duration?:    string;
+  lessons:      Lesson[];
 }
 
 export interface Course {
@@ -45,10 +47,18 @@ export interface Course {
   level:       CourseLevel;
   category:    string;
   duration:    string;
-  progress:    number;
-  roleTarget:  string;
-  relatedLabs: string[];
-  modules:     CourseModule[];
+  progress?:   number;
+  roleTarget?: string;
+  relatedLabs:    string[];
+  relatedQuizzes?: string[];
+  icon?:           string;
+  thumbnail?:      string;
+  rating?:         number;
+  students?:       number;
+  prerequisites?:  string[];
+  skills?:         string[];
+  objectives?:     string[];
+  modules:         CourseModule[];
 }
 
 /* ─── Mock Data ─────────────────────────────────────────────────── */
@@ -1135,7 +1145,6 @@ export const courses: Course[] = [
     duration:    "8 hours",
     progress:    0,
     roleTarget:  "Network Engineer / ISP Engineer",
-    relatedLabs: ["bgp-ebgp-config"],
     modules: [
       {
         id:          "bgp-basics",

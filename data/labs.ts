@@ -1,6 +1,6 @@
 /* ─── Types ─────────────────────────────────────────────────────── */
 export type LabLevel  = "Beginner" | "Intermediate" | "Advanced";
-export type LabStatus = "not-started" | "in-progress" | "completed";
+export type LabStatus = "not-started" | "in-progress" | "completed" | "available";
 
 export interface IpEntry {
   device:    string;
@@ -16,6 +16,7 @@ export interface TopologyLink {
   from: string;
   to:   string;
   port?: string;
+  devices?: string[];
 }
 
 export interface Lab {
@@ -26,10 +27,14 @@ export interface Lab {
   duration:        string;
   status:          LabStatus;
   description:     string;
-  scenario:        string;
-  objective:       string;
-  devices:         string[];
-  topology:        TopologyLink[];
+  scenario?:       string;
+  objective?:      string;
+  devices?:        string[];
+  topology:        TopologyLink[] | {
+    devices?:      { name: string; type: string; ip?: string }[];
+    links?:        TopologyLink[];
+    connections?:  { from: string; to: string; label?: string; bandwidth?: string }[];
+  };
   ipTable:         IpEntry[];
   tasks:           string[];
   hints:           string[];
@@ -37,6 +42,8 @@ export interface Lab {
   troubleshooting: string[];
   solution:        string;
   roadmapLevel:    number;
+  technology?:     string;
+  points?:         number;
 }
 
 /* ─── Mock Data ─────────────────────────────────────────────────── */

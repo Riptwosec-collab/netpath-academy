@@ -99,6 +99,7 @@ export interface TrackInfo {
   estimatedHours: number;
   targetCert?: string;
   prereqTrack?: CourseTrack;
+  portfolioTask?: PortfolioTask;
 }
 
 // ─── Foundation category ─────────────────────────────────────────

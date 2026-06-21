@@ -428,6 +428,210 @@ const saseLesson: Lesson = {
   order: 1,
 };
 
+const cniDeepDive: Lesson = {
+  id: "cloud-002",
+  slug: "cni-deep-dive-calico-cilium",
+  title: "CNI Deep Dive: Calico vs Cilium vs Flannel",
+  titleTh: "CNI Deep Dive — Calico, Cilium, Flannel",
+  track: "cloud-ai-ops",
+  category: "kubernetes",
+  level: "Advanced",
+  duration: "90 min",
+  xp: 150,
+  description: "เปรียบเทียบ CNI Plugin ทั้งสาม — Flannel (VXLAN), Calico (BGP), Cilium (eBPF) อย่างละเอียด พร้อม Use Case และ Performance",
+  objectives: [
+    "อธิบาย Flannel VXLAN Overlay ทำงานอย่างไร",
+    "เข้าใจ Calico BGP Routing Mode vs VXLAN Mode",
+    "อธิบาย Cilium eBPF Data Plane และข้อดี",
+    "เลือก CNI Plugin ได้ถูกต้องตาม Use Case",
+  ],
+  prerequisites: ["kubernetes-networking-overview"],
+  concepts: ["CNI", "Flannel", "VXLAN", "Overlay", "Calico", "BGP", "BIRD", "Felix", "Cilium", "eBPF", "XDP", "Hubble", "kube-proxy Replacement", "NetworkPolicy", "WireGuard", "IPAM"],
+  mermaidDiagram: `graph TB
+    subgraph Flannel ["Flannel (VXLAN Overlay)"]
+      FP1["Pod A\n10.244.0.2"] -->|"VXLAN Encap"| FH1["flanneld\n(UDP 8472)"]
+      FH1 -->|"UDP Tunnel"| FH2["flanneld Node2"]
+      FH2 -->|"Decap"| FP2["Pod B\n10.244.1.2"]
+    end
+    subgraph Calico ["Calico (BGP Mode)"]
+      CP1["Pod C\n192.168.0.2"] -->|"Native Routing"| CB["BIRD BGP\n(Peer with Switch)"]
+      CB -->|"BGP Advertise"| CS["Switch/Router"]
+    end
+    subgraph Cilium ["Cilium (eBPF)"]
+      CEP1["Pod E"] -->|"eBPF Hook\n(no iptables)"| CBPF["eBPF Programs\nin Kernel"]
+      CBPF -->|"Direct"| CEP2["Pod F"]
+    end`,
+  yamlExamples: [
+    {
+      title: "Cilium CiliumNetworkPolicy (L7 HTTP)",
+      code: `apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-get-only
+spec:
+  endpointSelector:
+    matchLabels:
+      app: backend
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app: frontend
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+      rules:
+        http:
+        - method: GET
+          path: "/api/.*"`,
+      description: "Cilium ทำ L7 Policy ได้ — อนุญาตเฉพาะ GET /api/* จาก frontend",
+    },
+    {
+      title: "Calico BGPPeer Configuration",
+      code: `apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: spine-switch
+spec:
+  peerIP: 10.0.0.1
+  asNumber: 65000`,
+      description: "Calico BGP Peer กับ Spine Switch — ทำ Native Routing ไม่ต้อง Overlay",
+    },
+  ],
+  commands: [
+    { command: "kubectl get pods -n kube-system | grep -E 'calico|cilium|flannel'", description: "ดู CNI Pods ที่ Deploy อยู่" },
+    { command: "calicoctl get nodes -o wide", description: "ดู Calico Node Status" },
+    { command: "cilium status", description: "ดู Cilium Status ทั้งหมด" },
+    { command: "cilium monitor", description: "ดู Real-time Network Events ใน Cilium" },
+    { command: "hubble observe --namespace production", description: "ดู Network Flows ผ่าน Hubble" },
+    { command: "cilium connectivity test", description: "Test Connectivity ครบชุด" },
+  ],
+  labs: [
+    {
+      title: "CNI Comparison Lab",
+      level: "Advanced",
+      estimatedMinutes: 90,
+      steps: [
+        "Deploy Kind cluster กับ Flannel — ทดสอบ Pod-to-Pod connectivity",
+        "สังเกต VXLAN Interface: ip link show | grep flannel",
+        "Deploy Kind cluster กับ Cilium แทน",
+        "ทดสอบ Pod-to-Pod connectivity",
+        "Deploy CiliumNetworkPolicy L7 — อนุญาตเฉพาะ GET requests",
+        "ทดสอบ Policy: GET ผ่าน, POST ถูกบล็อก",
+        "เปิด Hubble UI ดู Network Flows",
+        "เปรียบเทียบ Latency: iperf3 ผ่าน Flannel vs Cilium",
+      ],
+      verification: [
+        "Flannel: ip link show type vxlan มี interface",
+        "Cilium: cilium status ไม่มี Error",
+        "L7 Policy ทำงานถูกต้อง",
+        "Hubble แสดง flow logs",
+      ],
+    },
+  ],
+  troubleshooting: [
+    { symptom: "Pod ไม่ได้รับ IP (CNI Error)", possibleCause: "CNI Binary ไม่อยู่ใน /opt/cni/bin หรือ Config ผิด", check: "journalctl -u kubelet | grep CNI, ls /opt/cni/bin/", fix: "Reinstall CNI Plugin, ตรวจ Config ใน /etc/cni/net.d/" },
+    { symptom: "Cilium Pod CrashLoopBackOff", possibleCause: "Kernel ไม่รองรับ eBPF, หรือ Mount ไม่สำเร็จ", check: "kubectl logs -n kube-system <cilium-pod>, uname -r (ต้องการ >= 4.9)", fix: "Update Kernel, ตรวจ BPF Filesystem mount" },
+    { symptom: "Calico BGP Peer ไม่ขึ้น", possibleCause: "ASN ผิด, Firewall บล็อก BGP Port 179", check: "calicoctl node status, ตรวจ Port 179", fix: "แก้ BGPPeer Config, เปิด Port 179" },
+  ],
+  quiz: [
+    makeQ("Flannel ใช้ Technique ใดในการส่ง Pod Traffic ข้าม Node?", ["BGP Routing", "VXLAN Overlay Encapsulation", "eBPF Direct Routing", "NAT"], "VXLAN Overlay Encapsulation", "Flannel ใช้ VXLAN Tunnel ห่อ (Encap) Pod Packet ก่อนส่งข้าม Node — มี Overhead เล็กน้อย แต่ง่าย ไม่ต้องการ Network Support"),
+    makeQ("Calico BGP Mode ข้อดีหลักคืออะไร?", ["ไม่ต้องการ Certificate", "Native Routing ไม่มี Overhead จาก Encapsulation", "ง่ายกว่า Flannel", "รองรับ Windows เท่านั้น"], "Native Routing ไม่มี Overhead จาก Encapsulation", "Calico BGP Mode โฆษณา Pod CIDR ผ่าน BGP ไปยัง Router/Switch — Pod Packet ไม่ถูก Encap จึง Latency ต่ำกว่า Overlay"),
+    makeQ("Cilium แตกต่างจาก CNI อื่นตรงไหนที่สำคัญที่สุด?", ["ราคาถูกกว่า", "ใช้ eBPF แทน iptables ทำให้ Performance สูงกว่า + L7 Policy", "รองรับ IPv6 เท่านั้น", "ทำงานได้เฉพาะบน AWS"], "ใช้ eBPF แทน iptables ทำให้ Performance สูงกว่า + L7 Policy", "Cilium ใช้ eBPF Programs ใน Linux Kernel แทน iptables rules ซึ่งเร็วกว่า Scale ดีกว่า + รองรับ L7 (HTTP/gRPC) NetworkPolicy"),
+    makeQ("Hubble ใน Cilium ใช้ทำอะไร?", ["Replace kube-proxy", "Network Observability — ดู Flow Logs, HTTP Metrics, DNS", "IPAM สำหรับ Pod", "Encrypt Pod Traffic"], "Network Observability — ดู Flow Logs, HTTP Metrics, DNS", "Hubble คือ Observability Layer ของ Cilium — ดู Network Flows, HTTP Request/Response, DNS Queries แบบ Real-time โดยใช้ eBPF"),
+    makeQ("เมื่อไรควรเลือก Flannel?", ["ต้องการ L7 Policy", "ต้องการ BGP Integration กับ Physical Network", "เริ่มต้นง่าย ไม่ต้องการ Feature ซับซ้อน", "ต้องการ Performance สูงสุด"], "เริ่มต้นง่าย ไม่ต้องการ Feature ซับซ้อน", "Flannel: Simple, Stable, ติดตั้งง่าย — เหมาะสำหรับ Dev/Test หรือ Cluster เล็กๆ ที่ไม่ต้องการ NetworkPolicy หรือ Observability"),
+  ],
+  interviewQuestions: [
+    makeI("Mid", "เปรียบเทียบ Flannel vs Calico vs Cilium สำหรับ Production", "Flannel: ง่าย แต่ไม่มี NetworkPolicy; Calico: NetworkPolicy + BGP ดี แต่ใช้ iptables; Cilium: eBPF Performance ดีที่สุด + L7 + Observability แต่ซับซ้อนกว่า ต้องการ Kernel >=4.9"),
+    makeI("Senior", "อธิบาย eBPF ทำงานอย่างไรใน Cilium", "eBPF Programs compile ลง Kernel Bytecode — Hook ที่ TC (Traffic Control) หรือ XDP (Express Data Path) ทำ Packet Processing ใน Kernel โดยตรง ไม่ต้อง copy ไป Userspace ไม่ต้องผ่าน iptables chains → Latency ต่ำมาก Scale ดีกว่าเมื่อ Rules เยอะ"),
+  ],
+  tags: ["Kubernetes", "CNI", "Calico", "Cilium", "Flannel", "eBPF", "BGP", "NetworkPolicy"],
+  order: 2,
+};
+
+const ebpfXdp: Lesson = {
+  id: "cloud-003",
+  slug: "ebpf-xdp",
+  title: "eBPF / XDP Deep Dive",
+  titleTh: "eBPF และ XDP",
+  track: "cloud-ai-ops",
+  category: "ebpf",
+  level: "Expert",
+  duration: "90 min",
+  xp: 175,
+  description: "เรียนรู้ eBPF Architecture, Hook Points (XDP/TC/kprobe), BPF Maps และการนำไปใช้ใน Network — Load Balancer, Packet Filter, Observability",
+  objectives: [
+    "อธิบาย eBPF Architecture และ Hook Points",
+    "เข้าใจ XDP (Express Data Path) และ Use Case",
+    "อธิบาย BPF Maps ใช้ทำอะไร",
+    "เชื่อมโยง eBPF กับ Cilium และ Network Observability",
+  ],
+  prerequisites: ["cni-deep-dive-calico-cilium"],
+  concepts: ["eBPF", "BPF", "XDP", "TC Hook", "kprobe", "uprobe", "BPF Map", "BPF Verifier", "CO-RE", "BTF", "libbpf", "bpftool", "perf", "Cilium", "Hubble", "Katran"],
+  mermaidDiagram: `graph TB
+    subgraph Kernel ["Linux Kernel"]
+      subgraph Hooks ["eBPF Hook Points"]
+        XDP["XDP\n(Driver Level — Fastest)"]
+        TC["TC Ingress/Egress\n(After Netfilter)"]
+        KP["kprobe/tracepoint\n(Any kernel function)"]
+      end
+      BPF_V["BPF Verifier\n(Safety check)"]
+      BPF_JIT["JIT Compiler\n(→ Native code)"]
+      BPF_MAP["BPF Maps\n(Shared state)"]
+    end
+    USER["User Space\n(Go/C/Rust Program)"] -->|"Load BPF Program"| BPF_V
+    BPF_V --> BPF_JIT
+    BPF_JIT --> Hooks
+    Hooks <-->|"Read/Write"| BPF_MAP
+    USER <-->|"Read stats, configs"| BPF_MAP`,
+  commands: [
+    { command: "bpftool prog list", description: "ดู eBPF Programs ที่ Load อยู่" },
+    { command: "bpftool map list", description: "ดู BPF Maps ทั้งหมด" },
+    { command: "bpftool net list", description: "ดู eBPF Programs ที่ Attach กับ Network Interface" },
+    { command: "ip link set eth0 xdp obj xdp_prog.o sec xdp", description: "Load XDP Program บน Interface" },
+    { command: "bpftool prog show id <id> --pretty", description: "ดูรายละเอียด BPF Program" },
+    { command: "cat /sys/kernel/debug/tracing/trace_pipe", description: "ดู eBPF trace_printk Output" },
+  ],
+  labs: [
+    {
+      title: "XDP Packet Counter Lab",
+      level: "Expert",
+      estimatedMinutes: 60,
+      steps: [
+        "เขียน XDP Program ใน C นับ Packet ทุกประเภท",
+        "Compile: clang -O2 -target bpf -c xdp_counter.c -o xdp_counter.o",
+        "Load บน Interface: ip link set lo xdp obj xdp_counter.o sec xdp",
+        "ดู Counter ใน BPF Map: bpftool map dump id <id>",
+        "เขียน Userspace Program ด้วย libbpf อ่าน Map ทุก 1 วินาที",
+        "ทดสอบ: ส่ง Traffic แล้ว Counter เพิ่ม",
+      ],
+      verification: ["bpftool prog list แสดง xdp_counter", "Map dump แสดง Packet Count", "Counter เพิ่มตาม Traffic"],
+    },
+  ],
+  troubleshooting: [
+    { symptom: "BPF Program โดน Verifier Reject", possibleCause: "Loop ไม่มีขอบเขต, Pointer ไม่ได้ Check NULL, หรือ Stack เกิน 512 bytes", check: "ดู Verifier Error Message", fix: "เพิ่ม Bound Loop, Check NULL Pointer, ลด Stack Usage" },
+    { symptom: "XDP Program ทำให้ Network ใช้ไม่ได้", possibleCause: "โปรแกรม Drop ทุก Packet แทนที่จะ Pass", check: "ip link show ดู XDP mode, ทดสอบ ping", fix: "Detach XDP: ip link set <iface> xdp off, แก้ Program ให้ Return XDP_PASS" },
+  ],
+  quiz: [
+    makeQ("XDP ทำงานที่ตำแหน่งใดของ Kernel?", ["หลัง iptables", "หลัง TCP Stack", "ก่อน Network Stack — ที่ Driver Level", "หลัง Socket"], "ก่อน Network Stack — ที่ Driver Level", "XDP (eXpress Data Path) Process Packet ที่ Driver Level ก่อนที่ Kernel Network Stack จะเห็น — เร็วมาก (Line rate on commodity HW)"),
+    makeQ("BPF Map ใช้ทำอะไร?", ["Store Kernel Config", "แชร์ State ระหว่าง BPF Program และ Userspace", "Compile BPF Code", "Monitor CPU"], "แชร์ State ระหว่าง BPF Program และ Userspace", "BPF Maps เป็น Data Structure ใน Kernel ที่ทั้ง BPF Programs และ Userspace App อ่าน/เขียนได้ — ใช้เก็บ Counter, Config, Connection Table"),
+    makeQ("BPF Verifier ทำหน้าที่อะไร?", ["Compile BPF", "ตรวจสอบ BPF Program ว่าปลอดภัยก่อน Load เข้า Kernel", "Encrypt Traffic", "Monitor Syscalls"], "ตรวจสอบ BPF Program ว่าปลอดภัยก่อน Load เข้า Kernel", "Verifier ตรวจว่า Program ไม่มี Infinite Loop, ไม่ Access Memory นอกขอบเขต, และ Return Value ถูกต้อง — ป้องกัน Kernel Crash"),
+    makeQ("Cilium ใช้ eBPF Hook ที่ตำแหน่งใดหลักๆ?", ["XDP เท่านั้น", "TC (Traffic Control) Ingress/Egress", "kprobe เท่านั้น", "Socket Level"], "TC (Traffic Control) Ingress/Egress", "Cilium ใช้ TC Hook เป็นหลัก เพราะทำงานหลัง XDP (มี Context มากกว่า) + รองรับ VETH interface ของ Pod ได้"),
+    makeQ("eBPF ทำให้ Cilium ดีกว่า iptables อย่างไร?", ["iptables ไม่รองรับ IPv6", "eBPF O(1) Lookup เทียบกับ iptables O(n) Chain traversal", "eBPF ปลอดภัยกว่า", "iptables ไม่มีใน Linux"], "eBPF O(1) Lookup เทียบกับ iptables O(n) Chain traversal", "iptables ใช้ Linear Chain — ยิ่ง Rules เยอะยิ่งช้า; eBPF Maps ใช้ Hash Table ทำ O(1) Lookup — Scale ดีมากเมื่อ Pod เป็นหมื่น"),
+  ],
+  interviewQuestions: [
+    makeI("Senior", "อธิบาย eBPF Architecture ตั้งแต่ต้นจนจบ", "1) เขียน BPF Program ใน C; 2) Compile เป็น BPF Bytecode (clang -target bpf); 3) Load ผ่าน syscall bpf(); 4) Verifier ตรวจ Safety; 5) JIT Compile เป็น Native Code; 6) Attach เข้า Hook Point (XDP/TC/kprobe); 7) Kernel Execute เมื่อ Event เกิด; 8) BPF Map แชร์ State กับ Userspace"),
+    makeI("Senior", "เมื่อไรใช้ XDP vs TC Hook?", "XDP: ต้องการ Speed สูงสุด (DDoS Protection, Load Balancer) — ทำงานก่อน SKB Allocation; TC: ต้องการ Context มากกว่า (VETH Pod interface, Egress control, Connection tracking) — Cilium ใช้ TC เป็นหลัก"),
+  ],
+  portfolioTask: {
+    title: "Kubernetes Network Observability Lab",
+    description: "Deploy Cilium + Hubble + Grafana เพื่อ Full Network Observability",
+    deliverables: ["Kubernetes Network Diagram", "CNI Selection Justification", "Hubble Flow Dashboard", "L7 NetworkPolicy", "eBPF Observability Setup", "Troubleshooting Playbook"],
+  },
+  tags: ["eBPF", "XDP", "Cilium", "Kubernetes", "Observability", "Performance", "Kernel"],
+  order: 3,
+};
+
 // ═════════════════════════════════════════════════════════════════
 // EXPORT TRACKS
 // ═════════════════════════════════════════════════════════════════
@@ -453,8 +657,8 @@ export const advancedTracks: TrackInfo[] = [
     description: "Kubernetes Networking, CNI, eBPF, Cilium, OpenTelemetry, gNMI",
     icon: "☁️",
     color: "cyan",
-    lessons: [k8sNetworking],
-    totalXp: 125,
+    lessons: [k8sNetworking, cniDeepDive, ebpfXdp],
+    totalXp: 450,
     estimatedHours: 25,
     targetCert: "CKA / Cilium Associate",
     prereqTrack: "foundation",

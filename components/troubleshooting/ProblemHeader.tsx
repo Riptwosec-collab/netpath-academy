@@ -48,19 +48,19 @@ export default function ProblemHeader({ guide }: { guide: TroubleshootingGuide }
             <svg className="w-4 h-4 text-[#facc15]/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2" />
             </svg>
-            {guide.symptoms.length} อาการที่พบ
+            {(guide.symptoms ?? []).length} อาการที่พบ
           </span>
           <span className="flex items-center gap-1.5">
             <svg className="w-4 h-4 text-[#38bdf8]/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
             </svg>
-            {guide.flowSteps.length} ขั้นตอนไล่ปัญหา
+            {(guide.flowSteps ?? []).length} ขั้นตอนไล่ปัญหา
           </span>
           <span className="flex items-center gap-1.5">
             <svg className="w-4 h-4 text-[#8b5cf6]/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            {guide.commands.length} คำสั่ง
+            {(guide.commands?.length ?? 0)} คำสั่ง
           </span>
         </div>
       </div>

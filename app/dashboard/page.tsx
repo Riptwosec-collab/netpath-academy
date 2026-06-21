@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 
-import DashboardHeader   from "@/components/dashboard/DashboardHeader";
-import SummaryCards      from "@/components/dashboard/SummaryCards";
-import LearningProgress  from "@/components/dashboard/LearningProgress";
-import ContinueLearning  from "@/components/dashboard/ContinueLearning";
-import RecommendedLabs   from "@/components/dashboard/RecommendedLabs";
-import LatestQuizScores  from "@/components/dashboard/LatestQuizScores";
+import DashboardHeader    from "@/components/dashboard/DashboardHeader";
+import SummaryCards       from "@/components/dashboard/SummaryCards";
+import LearningProgress   from "@/components/dashboard/LearningProgress";
+import ContinueLearning   from "@/components/dashboard/ContinueLearning";
+import RecommendedLabs    from "@/components/dashboard/RecommendedLabs";
+import LatestQuizScores   from "@/components/dashboard/LatestQuizScores";
 import RecentAchievements from "@/components/dashboard/RecentAchievements";
-import RoadmapProgress   from "@/components/dashboard/RoadmapProgress";
-import AiTutorPreview    from "@/components/dashboard/AiTutorPreview";
-import WeeklyGoal        from "@/components/dashboard/WeeklyGoal";
-import SkillLevelPanel   from "@/components/dashboard/SkillLevelPanel";
+import RoadmapProgress    from "@/components/dashboard/RoadmapProgress";
+import AiTutorPreview     from "@/components/dashboard/AiTutorPreview";
+import WeeklyGoal         from "@/components/dashboard/WeeklyGoal";
+import SkillLevelPanel    from "@/components/dashboard/SkillLevelPanel";
+import TrackProgressCards from "@/components/dashboard/TrackProgressCards";
 
 import {
   dashboardStats,
@@ -39,6 +40,9 @@ export default function DashboardPage() {
 
       {/* ── Summary Cards ────────────────────────────────────────── */}
       <SummaryCards stats={dashboardStats} />
+
+      {/* ── Track Progress ───────────────────────────────────────── */}
+      <TrackProgressCards />
 
       {/* ── Main Grid ────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

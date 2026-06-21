@@ -26,11 +26,11 @@ const typeIcon: Record<string, string> = {
 };
 
 function LessonRow({ lesson, courseId, index }: { lesson: Lesson; courseId: string; index: number }) {
-  const stColor = statusColor[lesson.status] ?? "text-white/15";
-  const stIcon  = statusIcon[lesson.status]  ?? statusIcon.locked;
-  const stLabel = statusLabel[lesson.status] ?? "ล็อก";
-  const tyIcon  = typeIcon[lesson.type]      ?? typeIcon.lesson;
-  const isLocked = lesson.status === "locked";
+  const stColor = statusColor[lesson.status ?? "locked"] ?? "text-white/15";
+  const stIcon  = statusIcon[lesson.status  ?? "locked"] ?? statusIcon.locked;
+  const stLabel = statusLabel[lesson.status ?? "locked"] ?? "ล็อก";
+  const tyIcon  = typeIcon[lesson.type ?? "lesson"] ?? typeIcon.lesson;
+  const isLocked = (lesson.status ?? "not-started") === "locked";
 
   const rowClass = `flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-150 ${
     isLocked

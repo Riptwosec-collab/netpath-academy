@@ -51,7 +51,7 @@ export default function LabHeader({ lab }: { lab: Lab }) {
           ⏱ {lab.duration}
         </span>
         <span className="text-xs font-mono px-3 py-1 rounded-full border border-white/[0.08] text-white/30">
-          {lab.devices.length} อุปกรณ์
+          {(lab.devices ?? []).length} อุปกรณ์
         </span>
       </div>
 

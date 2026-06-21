@@ -14,7 +14,7 @@ describe("validateAiRequest", () => {
   it("rejects empty message", () => {
     const result = validateAiRequest({ mode: "explain", message: "", history: [] });
     expect(result.valid).toBe(false);
-    expect(result.error).toBeTruthy();
+    expect((result as { valid: false; error: string }).error).toBeTruthy();
   });
 
   it("rejects message with only whitespace", () => {

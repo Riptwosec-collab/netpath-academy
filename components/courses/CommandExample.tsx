@@ -1,4 +1,4 @@
-import type { Lesson } from "@/data/courses";
+import type { Lesson, CommandItem } from "@/data/courses";
 
 export default function CommandExample({ lesson }: { lesson: Lesson }) {
   if (!lesson.commands || lesson.commands.length === 0) return null;
@@ -11,25 +11,33 @@ export default function CommandExample({ lesson }: { lesson: Lesson }) {
         คำสั่งที่ต้องรู้
       </h2>
       <div className="space-y-3">
-        {lesson.commands.map((cmd, i) => (
-          <div key={i} className="rounded-xl overflow-hidden border border-white/[0.07]">
-            {/* Title */}
-            <div className="flex items-center justify-between px-4 py-2 bg-white/[0.03] border-b border-white/[0.06]">
-              <span className="text-xs font-medium text-white/50">{cmd.title}</span>
-              <span className="text-[10px] text-white/20 font-mono">#{i + 1}</span>
+        {lesson.commands.map((cmd, i) => {
+          // Handle both string[] and CommandItem[] formats
+          if (typeof cmd === "string") {
+            return (
+              <div key={i} className="rounded-xl overflow-hidden border border-white/[0.07]">
+                <div className="bg-[#0a0f1e] px-4 py-3">
+                  <pre className="text-sm font-mono text-[#38bdf8]/90 whitespace-pre-wrap leading-relaxed">{cmd}</pre>
+                </div>
+              </div>
+            );
+          }
+          const item = cmd as CommandItem;
+          return (
+            <div key={i} className="rounded-xl overflow-hidden border border-white/[0.07]">
+              <div className="flex items-center justify-between px-4 py-2 bg-white/[0.03] border-b border-white/[0.06]">
+                <span className="text-xs font-medium text-white/50">{item.title}</span>
+                <span className="text-[10px] text-white/20 font-mono">#{i + 1}</span>
+              </div>
+              <div className="bg-[#0a0f1e] px-4 py-3">
+                <pre className="text-sm font-mono text-[#38bdf8]/90 whitespace-pre-wrap leading-relaxed">{item.command}</pre>
+              </div>
+              <div className="px-4 py-2.5 bg-white/[0.01]">
+                <p className="text-xs text-white/35 leading-relaxed">{item.description}</p>
+              </div>
             </div>
-            {/* Command */}
-            <div className="bg-[#0a0f1e] px-4 py-3">
-              <pre className="text-sm font-mono text-[#38bdf8]/90 whitespace-pre-wrap leading-relaxed">
-                {cmd.command}
-              </pre>
-            </div>
-            {/* Description */}
-            <div className="px-4 py-2.5 bg-white/[0.01]">
-              <p className="text-xs text-white/35 leading-relaxed">{cmd.description}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -18,16 +18,16 @@ export default function RcaTemplate({ rca }: { rca: RcaData }) {
 
         <div className="p-4 flex flex-col gap-4 font-mono text-xs">
           {/* Title */}
-          <RcaRow label="INCIDENT" value={rca.incidentTitle} valueColor="text-white/80" />
+          <RcaRow label="INCIDENT" value={rca.incidentTitle ?? rca.problem ?? ""} valueColor="text-white/80" />
 
           {/* Impact */}
-          <RcaRow label="IMPACT" value={rca.impact} valueColor="text-[#ef4444]/70" />
+          <RcaRow label="IMPACT" value={rca.impact ?? ""} valueColor="text-[#ef4444]/70" />
 
           {/* Timeline */}
           <div>
             <p className="text-[10px] text-white/25 mb-2 uppercase tracking-wider">TIMELINE</p>
             <div className="flex flex-col gap-1.5 pl-3 border-l border-[#8b5cf6]/20">
-              {rca.timeline.map((t, i) => (
+              {(rca.timeline ?? []).map((t, i) => (
                 <p key={i} className="text-white/45 leading-[1.6]">{t}</p>
               ))}
             </div>
@@ -49,7 +49,7 @@ export default function RcaTemplate({ rca }: { rca: RcaData }) {
           <div>
             <p className="text-[10px] text-white/25 mb-2 uppercase tracking-wider">PREVENTION</p>
             <ul className="flex flex-col gap-1.5">
-              {rca.prevention.map((p, i) => (
+              {(Array.isArray(rca.prevention) ? rca.prevention : [rca.prevention]).map((p, i) => (
                 <li key={i} className="flex items-start gap-2 text-white/40">
                   <span className="text-[#38bdf8]/40 flex-shrink-0">→</span>
                   {p}

@@ -20,7 +20,7 @@ export default function CourseCard({ course }: { course: Course }) {
   const catCls = categoryColor[course.category] ?? "text-white/50 bg-white/5 border-white/10";
   const total  = getTotalLessons(course);
   const done   = getCompletedLessons(course);
-  const pct    = course.progress;
+  const pct    = (course.progress ?? 0);
 
   return (
     <Link

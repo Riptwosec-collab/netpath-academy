@@ -340,7 +340,7 @@ const aiGpuHardware: HardwareLesson = {
 
   interviewQuestions: [
     makeI("Senior", "อธิบาย 3 Network ที่แยกกันใน GPU Cluster", "1) GPU Fabric: RDMA/InfiniBand สำหรับ AllReduce — Low latency, High BW; 2) Storage Network: เชื่อม Parallel Storage ด้วย 100G+ Ethernet; 3) Management/OOB: Ethernet ธรรมดา เชื่อม BMC และ OS Management"),
-    makeI("Expert", "Tradeoff ระหว่าง InfiniBand กับ RoCE Ethernet สำหรับ AI Cluster", "IB: Latency ต่ำกว่า (< 1μs), Ecosystem เล็ก, แพงกว่า; RoCE: ใช้ Ethernet Ecosystem ใหญ่กว่า ถูกกว่า แต่ต้องการ Lossless Ethernet (PFC/ECN) และ Latency สูงกว่าเล็กน้อย — Trend ปัจจุบัน Hyperscaler เริ่มใช้ RoCE มากขึ้น"),
+    makeI("Senior", "Tradeoff ระหว่าง InfiniBand กับ RoCE Ethernet สำหรับ AI Cluster", "IB: Latency ต่ำกว่า (< 1μs), Ecosystem เล็ก, แพงกว่า; RoCE: ใช้ Ethernet Ecosystem ใหญ่กว่า ถูกกว่า แต่ต้องการ Lossless Ethernet (PFC/ECN) และ Latency สูงกว่าเล็กน้อย — Trend ปัจจุบัน Hyperscaler เริ่มใช้ RoCE มากขึ้น"),
   ],
   tags: ["AI", "GPU", "NVLink", "NVSwitch", "RDMA", "InfiniBand", "DPU", "SmartNIC", "Hardware"],
   order: 1,

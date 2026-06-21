@@ -26,7 +26,7 @@ export default function ExamCenterPage() {
         {[
           { label: "Total Exams",     value: exams.length,                          icon: BookOpen, color: "text-cyan-400"   },
           { label: "Available Now",   value: exams.length,                          icon: Trophy,   color: "text-amber-400"  },
-          { label: "Avg Time Limit",  value: `${Math.round(exams.reduce((a,e) => a + e.timeLimit, 0) / exams.length)} min`, icon: Clock, color: "text-violet-400" },
+          { label: "Avg Time Limit",  value: `${Math.round(exams.reduce((a,e) => a + (e.timeLimit ?? 60), 0) / exams.length)} min`, icon: Clock, color: "text-violet-400" },
         ].map(s => (
           <div key={s.label} className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4 flex items-center gap-3">
             <s.icon size={18} className={s.color} />

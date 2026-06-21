@@ -51,7 +51,7 @@ export default function TroubleshootingDetailPage({ params }: { params: { id: st
   }
 
   /* ── Guard: empty data ───────────────────────────────────────── */
-  if (!guide.flowSteps?.length && !guide.commands?.length) notFound();
+  if (!guide.flowSteps?.length && !(guide.commands?.length ?? 0)) notFound();
 
   return (
     <div className="px-4 md:px-6 py-6 max-w-4xl mx-auto space-y-5">
@@ -69,46 +69,46 @@ export default function TroubleshootingDetailPage({ params }: { params: { id: st
       <ProblemHeader guide={guide} />
 
       {/* 2 & 3. Symptoms + Possible Causes side-by-side on wide screens */}
-      {guide.symptoms?.length > 0 && (
-        <SymptomBox symptoms={guide.symptoms} />
+      {(guide.symptoms?.length ?? 0) > 0 && (
+        <SymptomBox symptoms={(guide.symptoms ?? []) as any} />
       )}
-      {guide.possibleCauses?.length > 0 && (
-        <PossibleCauses causes={guide.possibleCauses} />
+      {(guide.possibleCauses?.length ?? 0) > 0 && (
+        <PossibleCauses causes={(guide.possibleCauses ?? []) as any} />
       )}
 
       {/* 4. Troubleshooting Flow */}
-      {guide.flowSteps?.length > 0 && (
-        <TroubleshootingFlow steps={guide.flowSteps} />
+      {(guide.flowSteps?.length ?? 0) > 0 && (
+        <TroubleshootingFlow steps={(guide.flowSteps ?? []) as any} />
       )}
 
       {/* 5. Command Checklist */}
-      {guide.commands?.length > 0 && (
-        <CommandChecklist commands={guide.commands} />
+      {(guide.commands?.length ?? 0) > 0 && (
+        <CommandChecklist commands={(guide.commands ?? []) as import('@/data/troubleshooting').TroubleshootingCommand[]} />
       )}
 
       {/* 6. Decision Tree */}
-      {guide.decisionTree?.length > 0 && (
-        <DecisionTree nodes={guide.decisionTree} />
+      {(guide.decisionTree?.length ?? 0) > 0 && (
+        <DecisionTree nodes={(guide.decisionTree ?? []) as any} />
       )}
 
       {/* 7. Root Cause Examples */}
-      {guide.rootCauseExamples?.length > 0 && (
-        <RootCauseExamples examples={guide.rootCauseExamples} />
+      {(guide.rootCauseExamples?.length ?? 0) > 0 && (
+        <RootCauseExamples examples={(guide.rootCauseExamples ?? []) as any} />
       )}
 
       {/* 8. Fix Actions */}
-      {guide.fixActions?.length > 0 && (
-        <FixActions actions={guide.fixActions} />
+      {(guide.fixActions?.length ?? 0) > 0 && (
+        <FixActions actions={(guide.fixActions ?? []) as any} />
       )}
 
       {/* 9. Verification Steps (interactive checkbox) */}
-      {guide.verificationSteps?.length > 0 && (
-        <VerificationSteps steps={guide.verificationSteps} />
+      {(guide.verificationSteps?.length ?? 0) > 0 && (
+        <VerificationSteps steps={(guide.verificationSteps ?? []) as any} />
       )}
 
       {/* 10. Escalation Guide */}
-      {guide.escalation?.length > 0 && (
-        <EscalationGuide escalation={guide.escalation} />
+      {(guide.escalation?.length ?? 0) > 0 && (
+        <EscalationGuide escalation={(guide.escalation ?? []) as string[]} />
       )}
 
       {/* 11. RCA Template */}
@@ -117,9 +117,9 @@ export default function TroubleshootingDetailPage({ params }: { params: { id: st
       )}
 
       {/* 12. Related Labs / Courses */}
-      {(guide.relatedLabs?.length > 0 || guide.relatedCourses?.length > 0) && (
+      {((guide.relatedLabs?.length ?? 0) > 0 || (guide.relatedCourses?.length ?? 0) > 0) && (
         <div className="grid sm:grid-cols-2 gap-4">
-          {guide.relatedLabs?.length > 0 && (
+          {(guide.relatedLabs ?? [])?.length > 0 && (
             <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
               <h3 className="text-xs font-semibold text-white/50 mb-3 flex items-center gap-2">
                 <svg className="w-3.5 h-3.5 text-[#38bdf8]/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -128,7 +128,7 @@ export default function TroubleshootingDetailPage({ params }: { params: { id: st
                 Lab ที่เกี่ยวข้อง
               </h3>
               <div className="flex flex-col gap-1.5">
-                {guide.relatedLabs.map((lab) => (
+                {(guide.relatedLabs ?? []).map((lab) => (
                   <Link key={lab} href={`/labs/${lab}`}
                     className="text-xs text-[#38bdf8]/60 hover:text-[#38bdf8] transition-colors
                                flex items-center gap-1.5">
@@ -141,7 +141,7 @@ export default function TroubleshootingDetailPage({ params }: { params: { id: st
               </div>
             </div>
           )}
-          {guide.relatedCourses?.length > 0 && (
+          {(guide.relatedCourses ?? [])?.length > 0 && (
             <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
               <h3 className="text-xs font-semibold text-white/50 mb-3 flex items-center gap-2">
                 <svg className="w-3.5 h-3.5 text-[#8b5cf6]/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -150,7 +150,7 @@ export default function TroubleshootingDetailPage({ params }: { params: { id: st
                 Course ที่เกี่ยวข้อง
               </h3>
               <div className="flex flex-col gap-1.5">
-                {guide.relatedCourses.map((course) => (
+                {(guide.relatedCourses ?? []).map((course) => (
                   <Link key={course} href={`/courses/${course}`}
                     className="text-xs text-[#8b5cf6]/60 hover:text-[#8b5cf6] transition-colors
                                flex items-center gap-1.5">

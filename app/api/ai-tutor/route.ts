@@ -8,7 +8,7 @@ import type { AiTutorResponse } from "@/types/ai";
 export async function POST(req: NextRequest) {
   // ── Rate limit: 10 req/min per IP ───────────────────────────────────────────
   const ip = getClientIp(req);
-  const rl = checkRateLimit(`ai-tutor:${ip}`, { limit: 10, windowMs: 60_000 });
+  const rl = checkRateLimit(`ai-tutor:${ip}`, { limit: 10, window: 60_000 });
   if (!rl.allowed) {
     return NextResponse.json(
       { error: "Too many requests — กรุณารอ 1 นาทีแล้วลองใหม่" },

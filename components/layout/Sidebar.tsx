@@ -84,6 +84,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Learning Tools",
     items: [
+      { href: "/search",          label: "Search Lessons",  Icon: Network },
       { href: "/labs",            label: "Labs",            Icon: FlaskConical },
       { href: "/quiz",            label: "Quiz",            Icon: Brain },
       { href: "/exam",            label: "Exam Center",     Icon: GraduationCap },

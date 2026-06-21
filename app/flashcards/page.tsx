@@ -41,8 +41,8 @@ export default function FlashcardsPage() {
 
   function next() { setIndex(i => Math.min(i + 1, filtered.length - 1)); }
   function prev() { setIndex(i => Math.max(i - 1, 0)); }
-  function markKnown()   { setKnown(s => new Set([...s, card.id]));   next(); }
-  function markUnknown() { setUnknown(s => new Set([...s, card.id])); next(); }
+  function markKnown()   { setKnown(s => new Set(Array.from(s).concat(card.id)));   next(); }
+  function markUnknown() { setUnknown(s => new Set(Array.from(s).concat(card.id))); next(); }
   function reset() { setIndex(0); setKnown(new Set()); setUnknown(new Set()); }
 
   return (

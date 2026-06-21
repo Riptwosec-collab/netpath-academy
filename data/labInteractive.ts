@@ -10,6 +10,7 @@
 import type { Step } from "@/components/labs/LabStepTracker";
 
 export interface LabInteractive {
+  welcome?:     string;
   hostname:         string;
   terminalCommands: Record<string, string>;
   steps:            Step[];
