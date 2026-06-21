@@ -1182,6 +1182,615 @@ interface GigabitEthernet0/1
  mpls ip`,
     roadmapLevel: 5,
   },
+  {
+    id: "gre-tunnel-lab",
+    title: "GRE Tunnel & Point-to-Point VPN",
+    description: "สร้าง GRE tunnel ข้าม WAN เชื่อม site สองแห่งและ route traffic ผ่าน tunnel",
+    level: "Intermediate",
+    duration: "50 min",
+    category: "WAN",
+    status: "available",
+    technology: "GRE",
+    points: 180,
+    topology: {
+      devices: [
+        { name: "HQ", type: "router", ip: "203.0.113.1" },
+        { name: "BRANCH", type: "router", ip: "198.51.100.1" },
+        { name: "ISP", type: "router", ip: "" },
+      ],
+      connections: [
+        { from: "HQ", to: "ISP", bandwidth: "100 Mbps" },
+        { from: "ISP", to: "BRANCH", bandwidth: "100 Mbps" },
+      ],
+    },
+    ipTable: [
+      { device: "HQ", interface: "Gi0/0", ip: "203.0.113.1", subnet: "/30", gateway: "" },
+      { device: "HQ", interface: "Tunnel0", ip: "10.100.0.1", subnet: "/30", gateway: "" },
+      { device: "BRANCH", interface: "Gi0/0", ip: "198.51.100.1", subnet: "/30", gateway: "" },
+      { device: "BRANCH", interface: "Tunnel0", ip: "10.100.0.2", subnet: "/30", gateway: "" },
+    ],
+    tasks: [
+      "สร้าง interface Tunnel0 บน HQ และ BRANCH",
+      "กำหนด tunnel source และ tunnel destination (public IP)",
+      "assign IP บน tunnel interface ทั้งสองฝั่ง",
+      "เพิ่ม static route ชี้ LAN ฝั่งตรงข้ามผ่าน tunnel",
+      "ทดสอบ ping ข้าม tunnel",
+      "ตรวจสอบ show interfaces Tunnel0",
+    ],
+    hints: [
+      "tunnel source ใช้ public interface IP หรือ interface name ก็ได้",
+      "GRE overhead ประมาณ 24 bytes — ควรปรับ MTU",
+      "tunnel keepalive ช่วยตรวจ tunnel ล่มได้",
+    ],
+    expectedResult: "ping 10.100.0.2 source 10.100.0.1 สำเร็จ, show interfaces Tunnel0 แสดง Line protocol is up",
+    troubleshooting: [
+      "Tunnel down: ตรวจ route ไป tunnel destination มีใน routing table",
+      "Ping ไม่ผ่าน: ตรวจ ACL บน ISP ว่า block GRE (protocol 47) หรือไม่",
+      "Routing loop: ตรวจ recursive route ไป tunnel destination",
+    ],
+    solution: `interface Tunnel0
+ ip address 10.100.0.1 255.255.255.252
+ tunnel source GigabitEthernet0/0
+ tunnel destination 198.51.100.1
+ tunnel keepalive 10 3
+
+ip route 192.168.2.0 255.255.255.0 10.100.0.2`,
+    roadmapLevel: 3,
+  },
+  {
+    id: "ospf-multiarea-lab",
+    title: "OSPF Multi-Area Design",
+    description: "ออกแบบและกำหนดค่า OSPF หลาย Area รวมถึง ABR, stub area และ route summarization",
+    level: "Advanced",
+    duration: "70 min",
+    category: "Routing",
+    status: "available",
+    technology: "OSPF",
+    points: 220,
+    topology: {
+      devices: [
+        { name: "ABR1", type: "router", ip: "10.0.0.1" },
+        { name: "ABR2", type: "router", ip: "10.0.0.2" },
+        { name: "R_Area1", type: "router", ip: "10.1.1.1" },
+        { name: "R_Area2", type: "router", ip: "10.2.1.1" },
+        { name: "ASBR", type: "router", ip: "10.0.0.3" },
+      ],
+      connections: [
+        { from: "ABR1", to: "ABR2", bandwidth: "1 Gbps" },
+        { from: "ABR1", to: "R_Area1", bandwidth: "100 Mbps" },
+        { from: "ABR2", to: "R_Area2", bandwidth: "100 Mbps" },
+        { from: "ABR2", to: "ASBR", bandwidth: "100 Mbps" },
+      ],
+    },
+    ipTable: [
+      { device: "ABR1", interface: "Lo0", ip: "1.1.1.1", subnet: "/32", gateway: "" },
+      { device: "ABR2", interface: "Lo0", ip: "2.2.2.2", subnet: "/32", gateway: "" },
+      { device: "R_Area1", interface: "Lo0", ip: "3.3.3.3", subnet: "/32", gateway: "" },
+      { device: "R_Area2", interface: "Lo0", ip: "4.4.4.4", subnet: "/32", gateway: "" },
+    ],
+    tasks: [
+      "กำหนด OSPF Area 0 ระหว่าง ABR1 และ ABR2",
+      "กำหนด Area 1 ระหว่าง ABR1 และ R_Area1",
+      "กำหนด Area 2 เป็น Stub Area ระหว่าง ABR2 และ R_Area2",
+      "กำหนด route summarization บน ABR",
+      "Redistribute connected บน ASBR เป็น External Type 2",
+      "ตรวจสอบ show ip ospf database",
+    ],
+    hints: [
+      "Stub area ไม่รับ Type 5 LSA — ประหยัด memory บน spoke router",
+      "Summary ทำบน ABR ด้วย area X range",
+      "ASBR ต้องอยู่ใน non-stub area",
+    ],
+    expectedResult: "ทุก router มี route ครบ, R_Area2 เห็นเฉพาะ default route จาก ABR2, show ip ospf database summary มี LSA Type 3",
+    troubleshooting: [
+      "Neighbor ไม่ขึ้น: ตรวจ area number ตรงกัน, hello/dead timer, subnet",
+      "ไม่มี route external ใน stub: stub area ไม่รับ Type 5 — ปกติ",
+      "Summary ไม่ปรากฏ: ตรวจ area range บน ABR ตรง network จริง",
+    ],
+    solution: `router ospf 1
+ router-id 1.1.1.1
+ area 1 range 10.1.0.0 255.255.0.0
+ network 10.0.0.0 0.0.0.255 area 0
+ network 10.1.0.0 0.0.255.255 area 1
+
+! ABR2
+router ospf 1
+ area 2 stub
+ area 2 range 10.2.0.0 255.255.0.0
+ network 10.0.0.0 0.0.0.255 area 0
+ network 10.2.0.0 0.0.255.255 area 2`,
+    roadmapLevel: 4,
+  },
+  {
+    id: "route-redistribution-lab",
+    title: "Route Redistribution (OSPF ↔ EIGRP)",
+    description: "ทำ mutual redistribution ระหว่าง OSPF และ EIGRP พร้อมป้องกัน routing loop ด้วย route tagging",
+    level: "Advanced",
+    duration: "65 min",
+    category: "Routing",
+    status: "available",
+    technology: "OSPF/EIGRP",
+    points: 230,
+    topology: {
+      devices: [
+        { name: "ASBR", type: "router", ip: "10.0.0.1" },
+        { name: "OSPF_R1", type: "router", ip: "10.10.1.1" },
+        { name: "EIGRP_R1", type: "router", ip: "10.20.1.1" },
+      ],
+      connections: [
+        { from: "ASBR", to: "OSPF_R1", bandwidth: "100 Mbps" },
+        { from: "ASBR", to: "EIGRP_R1", bandwidth: "100 Mbps" },
+      ],
+    },
+    ipTable: [
+      { device: "ASBR", interface: "Gi0/0", ip: "10.10.0.1", subnet: "/24", gateway: "" },
+      { device: "ASBR", interface: "Gi0/1", ip: "10.20.0.1", subnet: "/24", gateway: "" },
+      { device: "OSPF_R1", interface: "Gi0/0", ip: "10.10.0.2", subnet: "/24", gateway: "10.10.0.1" },
+      { device: "EIGRP_R1", interface: "Gi0/0", ip: "10.20.0.2", subnet: "/24", gateway: "10.20.0.1" },
+    ],
+    tasks: [
+      "กำหนด OSPF บน ASBR ฝั่ง OSPF_R1",
+      "กำหนด EIGRP บน ASBR ฝั่ง EIGRP_R1",
+      "Redistribute EIGRP เข้า OSPF พร้อม metric",
+      "Redistribute OSPF เข้า EIGRP พร้อม metric",
+      "ใช้ route-map + tag ป้องกัน routing loop",
+      "ทดสอบ ping ข้ามโปรโตคอล",
+    ],
+    hints: [
+      "tag route ที่ redistribute เพื่อ deny กลับเมื่อ re-redistribute",
+      "OSPF redistribute ต้องใส่ subnets keyword",
+      "EIGRP metric ต้องใส่ 5 ค่า: BW delay reliability load MTU",
+    ],
+    expectedResult: "OSPF_R1 เห็น network ของ EIGRP เป็น E2, EIGRP_R1 เห็น network ของ OSPF เป็น EX, ping ข้ามฝั่งสำเร็จ",
+    troubleshooting: [
+      "Route ไม่ปรากฏ: ตรวจ redistribute subnets (OSPF) และ metric (EIGRP)",
+      "Routing loop: ตรวจ tag และ route-map deny",
+      "EIGRP metric ผิด: ต้องใส่ครบ 5 ค่า",
+    ],
+    solution: `route-map OSPF_TO_EIGRP permit 10
+ match tag 100
+ set tag 200
+
+route-map EIGRP_TO_OSPF permit 10
+ match tag 200
+ set tag 100
+
+router ospf 1
+ redistribute eigrp 1 subnets route-map EIGRP_TO_OSPF
+
+router eigrp 1
+ redistribute ospf 1 metric 10000 100 255 1 1500 route-map OSPF_TO_EIGRP`,
+    roadmapLevel: 5,
+  },
+  {
+    id: "ntp-syslog-lab",
+    title: "NTP Synchronization & Syslog Centralization",
+    description: "กำหนดค่า NTP hierarchy และส่ง syslog ไปยัง central server พร้อม logging level",
+    level: "Beginner",
+    duration: "30 min",
+    category: "Management",
+    status: "available",
+    technology: "NTP/Syslog",
+    points: 100,
+    topology: {
+      devices: [
+        { name: "NTP_SERVER", type: "router", ip: "10.0.0.1" },
+        { name: "SYSLOG_SRV", type: "server", ip: "10.0.0.10" },
+        { name: "SW1", type: "switch", ip: "10.0.0.2" },
+        { name: "R1", type: "router", ip: "10.0.0.3" },
+      ],
+      connections: [
+        { from: "NTP_SERVER", to: "SW1", bandwidth: "1 Gbps" },
+        { from: "SYSLOG_SRV", to: "SW1", bandwidth: "1 Gbps" },
+        { from: "R1", to: "SW1", bandwidth: "100 Mbps" },
+      ],
+    },
+    ipTable: [
+      { device: "NTP_SERVER", interface: "Gi0/0", ip: "10.0.0.1", subnet: "/24", gateway: "" },
+      { device: "SW1", interface: "Vlan1", ip: "10.0.0.2", subnet: "/24", gateway: "10.0.0.1" },
+      { device: "R1", interface: "Gi0/0", ip: "10.0.0.3", subnet: "/24", gateway: "10.0.0.1" },
+    ],
+    tasks: [
+      "กำหนด NTP_SERVER เป็น NTP master stratum 2",
+      "กำหนด R1 และ SW1 sync NTP จาก NTP_SERVER",
+      "ตรวจสอบ show ntp status และ show ntp associations",
+      "กำหนด logging host ชี้ไป SYSLOG_SRV",
+      "กำหนด logging level informational",
+      "ทดสอบด้วย debug ip routing และดู syslog",
+    ],
+    hints: [
+      "ntp master X กำหนดให้ router เป็น authoritative source",
+      "logging trap เลือก severity ของ syslog ที่ส่ง",
+      "service timestamps log datetime msec เพิ่ม timestamp",
+    ],
+    expectedResult: "show ntp status แสดง Clock is synchronized, syslog server ได้รับ log จาก R1 และ SW1",
+    troubleshooting: [
+      "NTP ไม่ sync: ตรวจ connectivity ถึง NTP server, ตรวจ ntp server คำสั่ง",
+      "Syslog ไม่ถึง server: ตรวจ IP ถูก, UDP 514 ไม่ถูก block",
+      "Timestamp ผิด: ตรวจ timezone ด้วย clock timezone",
+    ],
+    solution: `! NTP_SERVER
+ntp master 2
+
+! R1 และ SW1
+ntp server 10.0.0.1
+service timestamps log datetime msec
+logging host 10.0.0.10
+logging trap informational
+logging on`,
+    roadmapLevel: 2,
+  },
+  {
+    id: "dhcp-server-lab",
+    title: "DHCP Server & Relay Agent",
+    description: "กำหนดค่า DHCP server บน router, สร้าง scope หลาย VLAN และตั้ง relay agent สำหรับ subnet ต่างฝั่ง",
+    level: "Beginner",
+    duration: "35 min",
+    category: "Network Services",
+    status: "available",
+    technology: "DHCP",
+    points: 110,
+    topology: {
+      devices: [
+        { name: "DHCP_SRV", type: "router", ip: "10.0.0.1" },
+        { name: "RELAY_R", type: "router", ip: "10.1.0.1" },
+        { name: "PC1", type: "pc", ip: "DHCP" },
+        { name: "PC2", type: "pc", ip: "DHCP" },
+      ],
+      connections: [
+        { from: "DHCP_SRV", to: "RELAY_R", bandwidth: "1 Gbps" },
+        { from: "RELAY_R", to: "PC1", bandwidth: "100 Mbps" },
+        { from: "RELAY_R", to: "PC2", bandwidth: "100 Mbps" },
+      ],
+    },
+    ipTable: [
+      { device: "DHCP_SRV", interface: "Gi0/0", ip: "10.0.0.1", subnet: "/24", gateway: "" },
+      { device: "RELAY_R", interface: "Gi0/0", ip: "10.0.0.2", subnet: "/24", gateway: "" },
+      { device: "RELAY_R", interface: "Gi0/1", ip: "192.168.10.1", subnet: "/24", gateway: "" },
+      { device: "RELAY_R", interface: "Gi0/2", ip: "192.168.20.1", subnet: "/24", gateway: "" },
+    ],
+    tasks: [
+      "สร้าง DHCP pool สำหรับ 192.168.10.0/24 บน DHCP_SRV",
+      "สร้าง DHCP pool สำหรับ 192.168.20.0/24 บน DHCP_SRV",
+      "กำหนด ip helper-address บน RELAY_R interface Gi0/1 และ Gi0/2",
+      "exclude IP ที่ไม่ต้องการให้ assign",
+      "ทดสอบ PC1, PC2 ได้รับ IP จาก pool ที่ถูกต้อง",
+      "ตรวจสอบ show ip dhcp binding",
+    ],
+    hints: [
+      "ip helper-address ส่ง broadcast DHCP ข้าม subnet ไปหา server",
+      "ip dhcp excluded-address กำหนดก่อน pool",
+      "default-router ต้องตรงกับ gateway ของ subnet นั้น",
+    ],
+    expectedResult: "PC1 ได้ IP ใน 192.168.10.x, PC2 ได้ IP ใน 192.168.20.x, show ip dhcp binding แสดง lease ทั้งคู่",
+    troubleshooting: [
+      "Client ไม่ได้ IP: ตรวจ ip helper-address บน interface ที่ถูก",
+      "ได้ IP pool ผิด: ตรวจ network statement ใน pool ตรงกับ subnet",
+      "IP ซ้ำ: เพิ่ม excluded-address สำหรับ static IP ในวง",
+    ],
+    solution: `! DHCP_SRV
+ip dhcp excluded-address 192.168.10.1 192.168.10.10
+ip dhcp excluded-address 192.168.20.1 192.168.20.10
+
+ip dhcp pool VLAN10
+ network 192.168.10.0 255.255.255.0
+ default-router 192.168.10.1
+ dns-server 8.8.8.8
+ lease 1
+
+ip dhcp pool VLAN20
+ network 192.168.20.0 255.255.255.0
+ default-router 192.168.20.1
+ dns-server 8.8.8.8
+ lease 1
+
+! RELAY_R
+interface GigabitEthernet0/1
+ ip helper-address 10.0.0.1
+
+interface GigabitEthernet0/2
+ ip helper-address 10.0.0.1`,
+    roadmapLevel: 2,
+  },
+
+  {
+    id: "acl-advanced-lab",
+    title: "Extended ACL & Named ACL",
+    description: "สร้าง ACL กรอง traffic ตาม source/destination IP, port, protocol พร้อม apply inbound/outbound",
+    level: "Intermediate",
+    duration: "45 min",
+    category: "Security",
+    status: "available",
+    technology: "ACL",
+    points: 160,
+    topology: {
+      devices: [
+        { name: "R1", type: "router", ip: "10.0.0.1" },
+        { name: "PC_SALES", type: "pc", ip: "192.168.10.10" },
+        { name: "PC_HR", type: "pc", ip: "192.168.20.10" },
+        { name: "SERVER_WEB", type: "server", ip: "10.1.1.100" },
+        { name: "SERVER_DB", type: "server", ip: "10.1.1.200" },
+      ],
+      connections: [
+        { from: "PC_SALES", to: "R1", bandwidth: "100 Mbps" },
+        { from: "PC_HR", to: "R1", bandwidth: "100 Mbps" },
+        { from: "R1", to: "SERVER_WEB", bandwidth: "1 Gbps" },
+        { from: "R1", to: "SERVER_DB", bandwidth: "1 Gbps" },
+      ],
+    },
+    ipTable: [
+      { device: "R1", interface: "Gi0/0", ip: "192.168.10.1", subnet: "/24", gateway: "" },
+      { device: "R1", interface: "Gi0/1", ip: "192.168.20.1", subnet: "/24", gateway: "" },
+      { device: "R1", interface: "Gi0/2", ip: "10.1.1.1", subnet: "/24", gateway: "" },
+      { device: "PC_SALES", interface: "eth0", ip: "192.168.10.10", subnet: "/24", gateway: "192.168.10.1" },
+      { device: "PC_HR", interface: "eth0", ip: "192.168.20.10", subnet: "/24", gateway: "192.168.20.1" },
+    ],
+    tasks: [
+      "อนุญาต SALES เข้า WEB server port 80/443 เท่านั้น",
+      "อนุญาต HR เข้า WEB และ DB server ได้ทุก port",
+      "Block ทุก traffic อื่นไปยัง SERVER_DB",
+      "Apply ACL บน interface ที่เหมาะสม (inbound/outbound)",
+      "ทดสอบด้วย telnet/ping จาก PC แต่ละเครื่อง",
+      "ตรวจสอบ show ip access-lists",
+    ],
+    hints: [
+      "Extended ACL ควร apply ใกล้ source ที่สุด",
+      "ACL implicit deny any ที่ท้าย — ต้อง permit traffic ที่ต้องการก่อน",
+      "ใช้ named ACL เพื่อ insert rule โดยไม่ต้อง rewrite ทั้งหมด",
+    ],
+    expectedResult: "SALES ping WEB สำเร็จ, SALES ping DB ไม่ได้, HR เข้าได้ทั้ง WEB และ DB, show ip access-lists มี match count",
+    troubleshooting: [
+      "ACL block ทุก traffic: ตรวจ permit statement มาก่อน deny",
+      "ACL ไม่ทำงาน: ตรวจ apply ถูก interface และ direction",
+      "Cannot insert rule: ใช้ named ACL และ ip access-list extended NAME",
+    ],
+    solution: `ip access-list extended SALES_POLICY
+ permit tcp 192.168.10.0 0.0.0.255 host 10.1.1.100 eq 80
+ permit tcp 192.168.10.0 0.0.0.255 host 10.1.1.100 eq 443
+ deny ip 192.168.10.0 0.0.0.255 any
+
+ip access-list extended HR_POLICY
+ permit ip 192.168.20.0 0.0.0.255 10.1.1.0 0.0.0.255
+
+interface GigabitEthernet0/0
+ ip access-group SALES_POLICY in
+
+interface GigabitEthernet0/1
+ ip access-group HR_POLICY in`,
+    roadmapLevel: 3,
+  },
+  {
+    id: "bgp-basic-lab",
+    title: "eBGP Peering & Prefix Advertisement",
+    description: "กำหนดค่า eBGP ระหว่าง 2 AS, advertise prefix, กำหนด AS Path และ Local Preference",
+    level: "Advanced",
+    duration: "60 min",
+    category: "Routing",
+    status: "available",
+    technology: "BGP",
+    points: 210,
+    topology: {
+      devices: [
+        { name: "AS100_R1", type: "router", ip: "1.1.1.1" },
+        { name: "AS200_R1", type: "router", ip: "2.2.2.2" },
+        { name: "AS300_R1", type: "router", ip: "3.3.3.3" },
+      ],
+      connections: [
+        { from: "AS100_R1", to: "AS200_R1", bandwidth: "1 Gbps" },
+        { from: "AS200_R1", to: "AS300_R1", bandwidth: "1 Gbps" },
+      ],
+    },
+    ipTable: [
+      { device: "AS100_R1", interface: "Gi0/0", ip: "10.12.0.1", subnet: "/30", gateway: "" },
+      { device: "AS200_R1", interface: "Gi0/0", ip: "10.12.0.2", subnet: "/30", gateway: "" },
+      { device: "AS200_R1", interface: "Gi0/1", ip: "10.23.0.1", subnet: "/30", gateway: "" },
+      { device: "AS300_R1", interface: "Gi0/0", ip: "10.23.0.2", subnet: "/30", gateway: "" },
+    ],
+    tasks: [
+      "กำหนด eBGP peer ระหว่าง AS100-AS200 และ AS200-AS300",
+      "Advertise loopback prefix ของแต่ละ AS เข้า BGP",
+      "ตรวจสอบ show bgp ipv4 unicast summary",
+      "ปรับ Local Preference บน AS200 เพื่อเลือก exit",
+      "ใช้ route-map กรอง prefix ที่รับจาก AS100",
+      "ตรวจสอบ AS Path ด้วย show bgp ipv4 unicast",
+    ],
+    hints: [
+      "eBGP neighbor ต้อง directly connected หรือ ebgp-multihop",
+      "network statement ใน BGP ต้องมี exact match ใน routing table",
+      "Local Preference ส่งผ่าน iBGP เท่านั้น",
+    ],
+    expectedResult: "BGP summary แสดง State = Established, prefix ของทุก AS ปรากฏใน routing table, AS Path ถูกต้อง",
+    troubleshooting: [
+      "Neighbor ไม่ขึ้น: ตรวจ remote-as ถูก, connectivity ถึง neighbor IP",
+      "Prefix ไม่ปรากฏ: ตรวจ network statement ตรงกับ route ใน table",
+      "Route ไม่ install: ตรวจ next-hop reachability",
+    ],
+    solution: `router bgp 100
+ bgp router-id 1.1.1.1
+ neighbor 10.12.0.2 remote-as 200
+ network 1.1.1.0 mask 255.255.255.0
+
+router bgp 200
+ bgp router-id 2.2.2.2
+ neighbor 10.12.0.1 remote-as 100
+ neighbor 10.23.0.2 remote-as 300
+ network 2.2.2.0 mask 255.255.255.0`,
+    roadmapLevel: 5,
+  },
+  {
+    id: "ipv6-tunnel-lab",
+    title: "IPv6 Tunneling (6in4)",
+    description: "สร้าง IPv6-over-IPv4 tunnel เชื่อม IPv6 island ข้าม IPv4-only network",
+    level: "Advanced",
+    duration: "55 min",
+    category: "IPv6",
+    status: "available",
+    technology: "IPv6",
+    points: 200,
+    topology: {
+      devices: [
+        { name: "R_SITE_A", type: "router", ip: "203.0.113.1" },
+        { name: "R_SITE_B", type: "router", ip: "198.51.100.1" },
+        { name: "IPV4_CORE", type: "router", ip: "172.16.0.1" },
+      ],
+      connections: [
+        { from: "R_SITE_A", to: "IPV4_CORE", bandwidth: "100 Mbps" },
+        { from: "IPV4_CORE", to: "R_SITE_B", bandwidth: "100 Mbps" },
+      ],
+    },
+    ipTable: [
+      { device: "R_SITE_A", interface: "Gi0/0", ip: "203.0.113.1", subnet: "/30", gateway: "" },
+      { device: "R_SITE_A", interface: "Tunnel0", ip: "2001:db8:1::1", subnet: "/64", gateway: "", notes: "IPv6" },
+      { device: "R_SITE_B", interface: "Gi0/0", ip: "198.51.100.1", subnet: "/30", gateway: "" },
+      { device: "R_SITE_B", interface: "Tunnel0", ip: "2001:db8:1::2", subnet: "/64", gateway: "", notes: "IPv6" },
+    ],
+    tasks: [
+      "สร้าง Tunnel0 mode ipv6ip บน R_SITE_A และ R_SITE_B",
+      "กำหนด tunnel source (IPv4) และ tunnel destination",
+      "assign IPv6 address บน tunnel interface",
+      "กำหนด IPv6 static route ชี้ผ่าน tunnel",
+      "ทดสอบ ping IPv6 ข้าม tunnel",
+      "ตรวจสอบ show interfaces Tunnel0",
+    ],
+    hints: [
+      "tunnel mode ipv6ip สำหรับ manual 6in4 tunnel",
+      "IPv6 routing ต้องเปิด ipv6 unicast-routing ก่อน",
+      "tunnel source ใช้ IPv4 interface ที่มี public IP",
+    ],
+    expectedResult: "ping ipv6 2001:db8:1::2 สำเร็จ, show interfaces Tunnel0 แสดง up/up",
+    troubleshooting: [
+      "Tunnel down: ตรวจ IPv4 connectivity ระหว่าง tunnel source/destination",
+      "Ping ไม่ผ่าน: ตรวจ ipv6 unicast-routing เปิดอยู่",
+      "Route ไม่มี: ตรวจ ipv6 route statement ชี้ tunnel interface",
+    ],
+    solution: `ipv6 unicast-routing
+
+interface Tunnel0
+ ipv6 address 2001:db8:1::1/64
+ tunnel source GigabitEthernet0/0
+ tunnel destination 198.51.100.1
+ tunnel mode ipv6ip
+
+ipv6 route 2001:db8:2::/48 Tunnel0`,
+    roadmapLevel: 4,
+  },
+  {
+    id: "qos-policing-lab",
+    title: "QoS Traffic Policing & Shaping",
+    description: "กำหนดค่า MQC สำหรับ classify, police และ shape traffic ตาม policy",
+    level: "Advanced",
+    duration: "60 min",
+    category: "QoS",
+    status: "available",
+    technology: "QoS",
+    points: 215,
+    topology: {
+      devices: [
+        { name: "CE_R1", type: "router", ip: "10.0.0.1" },
+        { name: "PE_R1", type: "router", ip: "10.0.0.2" },
+        { name: "PC_VIDEO", type: "pc", ip: "192.168.1.10" },
+        { name: "PC_DATA", type: "pc", ip: "192.168.2.10" },
+      ],
+      connections: [
+        { from: "CE_R1", to: "PE_R1", bandwidth: "10 Mbps" },
+        { from: "PC_VIDEO", to: "CE_R1", bandwidth: "100 Mbps" },
+        { from: "PC_DATA", to: "CE_R1", bandwidth: "100 Mbps" },
+      ],
+    },
+    ipTable: [
+      { device: "CE_R1", interface: "Gi0/0", ip: "192.168.1.1", subnet: "/24", gateway: "" },
+      { device: "CE_R1", interface: "Gi0/1", ip: "192.168.2.1", subnet: "/24", gateway: "" },
+      { device: "CE_R1", interface: "Gi0/2", ip: "10.0.0.1", subnet: "/30", gateway: "" },
+    ],
+    tasks: [
+      "สร้าง class-map จำแนก video traffic (DSCP EF) และ data traffic",
+      "สร้าง policy-map กำหนด bandwidth guarantee สำหรับ video 4 Mbps",
+      "Police data traffic ไม่เกิน 5 Mbps",
+      "Shape outbound traffic บน WAN interface 10 Mbps",
+      "Apply service-policy บน interface",
+      "ตรวจสอบ show policy-map interface",
+    ],
+    hints: [
+      "MQC: class-map → policy-map → service-policy",
+      "priority ใน policy-map ให้ LLQ (Low Latency Queuing)",
+      "police: conform-action transmit, exceed-action drop",
+    ],
+    expectedResult: "show policy-map interface แสดง class stats, video ได้รับ priority queue, data ถูก police",
+    troubleshooting: [
+      "Policy ไม่ match: ตรวจ class-map match conditions และ DSCP marking",
+      "Bandwidth ไม่พอ: ตรวจผลรวม bandwidth ไม่เกิน interface bandwidth",
+      "Shaping ไม่ทำงาน: ตรวจ shape average ค่าเป็น bps",
+    ],
+    solution: `class-map match-any VIDEO_CLASS
+ match dscp ef
+
+policy-map WAN_POLICY
+ class VIDEO_CLASS
+  priority 4000
+ class class-default
+  shape average 10000000
+
+interface GigabitEthernet0/2
+ service-policy output WAN_POLICY`,
+    roadmapLevel: 5,
+  },
+  {
+    id: "ppp-authentication-lab",
+    title: "PPP Authentication (PAP & CHAP)",
+    description: "กำหนดค่า PPP encapsulation บน serial link พร้อม CHAP authentication",
+    level: "Intermediate",
+    duration: "40 min",
+    category: "WAN",
+    status: "available",
+    technology: "PPP",
+    points: 145,
+    topology: {
+      devices: [
+        { name: "HQ_R", type: "router", ip: "10.0.0.1" },
+        { name: "BRANCH_R", type: "router", ip: "10.0.0.2" },
+      ],
+      connections: [
+        { from: "HQ_R", to: "BRANCH_R", bandwidth: "2 Mbps" },
+      ],
+    },
+    ipTable: [
+      { device: "HQ_R", interface: "Serial0/0", ip: "10.0.0.1", subnet: "/30", gateway: "" },
+      { device: "BRANCH_R", interface: "Serial0/0", ip: "10.0.0.2", subnet: "/30", gateway: "" },
+    ],
+    tasks: [
+      "กำหนด encapsulation ppp บน Serial interface ทั้งสองฝั่ง",
+      "สร้าง username/password สำหรับ CHAP authentication",
+      "กำหนด ppp authentication chap บน interface",
+      "ทดสอบ ping ผ่าน PPP link",
+      "เพิ่ม PAP authentication เป็น fallback",
+      "ตรวจสอบ show interfaces Serial0/0",
+    ],
+    hints: [
+      "CHAP username ต้องตรงกับ hostname ของ router ฝั่งตรงข้าม",
+      "CHAP ปลอดภัยกว่า PAP เพราะ hash password ด้วย MD5",
+      "ppp authentication chap pap ลอง CHAP ก่อน PAP",
+    ],
+    expectedResult: "show interfaces Serial0/0 แสดง LCP Open, CHAP Open, ping 10.0.0.2 สำเร็จ",
+    troubleshooting: [
+      "Authentication failed: ตรวจ username ตรงกับ hostname อีกฝั่ง",
+      "LCP ไม่ Open: ตรวจ encapsulation ppp ทั้งสองฝั่ง",
+      "Link down: ตรวจ clock rate บน DCE end",
+    ],
+    solution: `! HQ_R
+username BRANCH_R password cisco123
+interface Serial0/0
+ ip address 10.0.0.1 255.255.255.252
+ encapsulation ppp
+ ppp authentication chap
+
+! BRANCH_R
+username HQ_R password cisco123
+interface Serial0/0
+ ip address 10.0.0.2 255.255.255.252
+ encapsulation ppp
+ ppp authentication chap`,
+    roadmapLevel: 3,
+  },
 ];
 
 export const labCategories = Array.from(new Set(labs.map((l) => l.category)));

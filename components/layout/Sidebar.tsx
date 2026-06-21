@@ -2,75 +2,123 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   LayoutDashboard, Map, BookOpen, FlaskConical, Brain,
   Wrench, Bot, Trophy, FolderKanban, Network, Settings,
-  Wifi, GraduationCap, Layers, Terminal, Award, type LucideIcon,
+  Wifi, GraduationCap, Layers, Terminal, Award,
+  ChevronDown, ChevronRight, Cpu, Shield, Antenna,
+  HardDrive, Server, Zap, Radio, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ─── Nav Items ──────────────────────────────────────────────────
-const navGroups = [
+// ─── Types ────────────────────────────────────────────────────────
+interface NavItem {
+  href: string;
+  label: string;
+  Icon: LucideIcon;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+  collapsible?: boolean;
+}
+
+// ─── Navigation structure ─────────────────────────────────────────
+const navGroups: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-      { href: "/roadmap",   label: "Roadmap",   Icon: Map },
+      { href: "/dashboard", label: "Dashboard",   Icon: LayoutDashboard },
+      { href: "/roadmap",   label: "Roadmap",     Icon: Map },
     ],
   },
   {
-    label: "Learn",
+    label: "Foundation",
+    collapsible: true,
     items: [
-      { href: "/courses",         label: "Courses",         Icon: BookOpen },
+      { href: "/foundation",                    label: "Foundation Home",     Icon: BookOpen },
+      { href: "/foundation/network-fundamentals", label: "Network Fundamentals", Icon: Network },
+      { href: "/foundation/osi-tcpip",          label: "OSI / TCP-IP",        Icon: Layers },
+      { href: "/foundation/ip-subnetting",      label: "IP / Subnetting",     Icon: Terminal },
+      { href: "/foundation/switching",          label: "Switching",           Icon: HardDrive },
+      { href: "/foundation/routing",            label: "Routing",             Icon: Map },
+      { href: "/foundation/firewall-vpn",       label: "Firewall / VPN",      Icon: Shield },
+      { href: "/foundation/wireless-basic",     label: "Wireless Basic",      Icon: Wifi },
+      { href: "/foundation/monitoring-basic",   label: "Monitoring Basic",    Icon: Cpu },
+      { href: "/foundation/troubleshooting-basic", label: "Troubleshooting",  Icon: Wrench },
+      { href: "/foundation/documentation",      label: "Documentation",       Icon: FolderKanban },
+    ],
+  },
+  {
+    label: "Advanced Tracks",
+    collapsible: true,
+    items: [
+      { href: "/advanced",                        label: "Advanced Home",         Icon: Award },
+      { href: "/advanced/ai-infrastructure",      label: "AI Infrastructure",     Icon: Cpu },
+      { href: "/advanced/cloud-ai-ops",           label: "Cloud Native & AI Ops", Icon: Server },
+      { href: "/advanced/wireless-mobile",        label: "Wireless & Mobile",     Icon: Radio },
+      { href: "/advanced/security",               label: "Modern Security",       Icon: Shield },
+      { href: "/advanced/hardware-infrastructure",label: "Network Hardware",      Icon: HardDrive },
+    ],
+  },
+  {
+    label: "Hardware",
+    collapsible: true,
+    items: [
+      { href: "/hardware",                      label: "Hardware Home",         Icon: Server },
+      { href: "/hardware/cabling",              label: "Cabling & Connectors",  Icon: Zap },
+      { href: "/hardware/switching",            label: "Switch Hardware",       Icon: HardDrive },
+      { href: "/hardware/routing",              label: "Router Hardware",       Icon: Map },
+      { href: "/hardware/security",             label: "Firewall Appliances",   Icon: Shield },
+      { href: "/hardware/wireless",             label: "Wireless Hardware",     Icon: Wifi },
+      { href: "/hardware/datacenter",           label: "Data Center HW",        Icon: Server },
+      { href: "/hardware/ai-gpu",               label: "AI/GPU Hardware",       Icon: Cpu },
+      { href: "/hardware/monitoring",           label: "Monitoring / TAP",      Icon: Antenna },
+      { href: "/hardware/power-rack-cooling",   label: "Power / Rack / Cooling",Icon: Zap },
+      { href: "/hardware/isp-wan-edge",         label: "ISP / WAN / Edge",      Icon: Network },
+      { href: "/hardware/voice-iot-ot",         label: "Voice / IoT / OT",      Icon: Radio },
+    ],
+  },
+  {
+    label: "Learning Tools",
+    items: [
       { href: "/labs",            label: "Labs",            Icon: FlaskConical },
       { href: "/quiz",            label: "Quiz",            Icon: Brain },
       { href: "/exam",            label: "Exam Center",     Icon: GraduationCap },
+      { href: "/flashcards",      label: "Flashcards",      Icon: Layers },
       { href: "/troubleshooting", label: "Troubleshooting", Icon: Wrench },
-    ],
-  },
-  {
-    label: "Reference",
-    items: [
-      { href: "/flashcards",    label: "Flashcards",    Icon: Layers   },
-      { href: "/commands",      label: "Commands",      Icon: Terminal  },
-      { href: "/skill-tree",    label: "Skill Tree",    Icon: Award     },
-      { href: "/certifications",label: "Certifications",Icon: GraduationCap },
-    ],
-  },
-  {
-    label: "Tools & AI",
-    items: [
-      { href: "/ai-tutor", label: "AI Tutor", Icon: Bot },
-      { href: "/tools",    label: "Tools",    Icon: Network },
+      { href: "/commands",        label: "Cheat Sheets",    Icon: Terminal },
+      { href: "/ai-tutor",        label: "AI Tutor",        Icon: Bot },
+      { href: "/tools",           label: "Tools",           Icon: Network },
     ],
   },
   {
     label: "Progress",
     items: [
-      { href: "/progress",  label: "Progress",  Icon: Trophy },
-      { href: "/portfolio", label: "Portfolio", Icon: FolderKanban },
+      { href: "/progress",     label: "Progress",        Icon: Trophy },
+      { href: "/portfolio",    label: "Portfolio",       Icon: FolderKanban },
+      { href: "/skill-tree",   label: "Skill Tree",      Icon: Award },
+      { href: "/career",       label: "Career Paths",    Icon: Map },
+      { href: "/certifications", label: "Certifications",Icon: GraduationCap },
     ],
   },
 ];
 
-// ─── Single nav link ─────────────────────────────────────────────
+// ─── Single nav link ──────────────────────────────────────────────
 function NavLink({
-  href,
-  label,
-  Icon,
-  active,
+  href, label, Icon, active, indent = false,
 }: {
-  href:   string;
-  label:  string;
-  Icon:   LucideIcon;
-  active: boolean;
+  href: string; label: string; Icon: LucideIcon; active: boolean; indent?: boolean;
 }) {
   return (
     <Link
       href={href}
       className={cn(
-        "relative flex items-center gap-2.5 px-3 py-[7px] rounded-lg",
-        "text-[13px] font-medium transition-all duration-150 group",
+        "relative flex items-center gap-2.5 rounded-lg transition-all duration-150 group",
+        indent ? "pl-6 pr-3 py-[6px] text-[12px]" : "px-3 py-[7px] text-[13px]",
+        "font-medium",
         active
           ? "text-cyan-400 bg-cyan-500/10 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.18)]"
           : "text-white/45 hover:text-white/80 hover:bg-white/[0.05]",
@@ -80,7 +128,7 @@ function NavLink({
         <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-cyan-400 rounded-full" />
       )}
       <Icon
-        size={15}
+        size={indent ? 13 : 15}
         className={active ? "text-cyan-400" : "text-white/35 group-hover:text-white/60"}
       />
       {label}
@@ -88,14 +136,55 @@ function NavLink({
   );
 }
 
-// ─── Sidebar ─────────────────────────────────────────────────────
+// ─── Collapsible Group ────────────────────────────────────────────
+function CollapsibleGroup({
+  group, pathname,
+}: {
+  group: NavGroup; pathname: string;
+}) {
+  const isActive = group.items.some(i => pathname.startsWith(i.href) && i.href !== "/dashboard");
+  const [open, setOpen] = useState(isActive);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "w-full flex items-center justify-between px-3 py-1 rounded-lg",
+          "text-[10px] font-bold uppercase tracking-[0.15em] transition-colors",
+          open ? "text-white/60" : "text-white/25 hover:text-white/40",
+        )}
+      >
+        {group.label}
+        {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+      </button>
+
+      {open && (
+        <div className="flex flex-col gap-0.5 mt-0.5">
+          {group.items.map(({ href, label, Icon }, i) => (
+            <NavLink
+              key={href}
+              href={href}
+              label={label}
+              Icon={Icon}
+              active={pathname === href || (href !== "/foundation" && href !== "/advanced" && href !== "/hardware" && pathname.startsWith(href))}
+              indent={i > 0}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Sidebar ──────────────────────────────────────────────────────
 export default function Sidebar() {
   const pathname = usePathname();
 
   return (
     <aside className="hidden md:flex w-60 min-h-screen flex-col flex-shrink-0 bg-white/[0.03] backdrop-blur-xl border-r border-white/[0.07] py-5 px-3">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-3 mb-7">
+      <div className="flex items-center gap-2.5 px-3 mb-6">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center shadow-[0_0_12px_rgba(56,189,248,0.4)]">
           <Wifi size={16} className="text-white" />
         </div>
@@ -105,30 +194,34 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Nav groups */}
-      <nav className="flex flex-col gap-5 flex-1 overflow-y-auto scrollbar-none">
-        {navGroups.map((group) => (
-          <div key={group.label}>
-            <p className="text-[10px] font-bold text-white/25 uppercase tracking-[0.15em] px-3 mb-1.5">
-              {group.label}
-            </p>
-            <div className="flex flex-col gap-0.5">
-              {group.items.map(({ href, label, Icon }) => (
-                <NavLink
-                  key={href}
-                  href={href}
-                  label={label}
-                  Icon={Icon}
-                  active={pathname === href}
-                />
-              ))}
+      {/* Nav */}
+      <nav className="flex flex-col gap-4 flex-1 overflow-y-auto scrollbar-none pr-0.5">
+        {navGroups.map((group) =>
+          group.collapsible ? (
+            <CollapsibleGroup key={group.label} group={group} pathname={pathname} />
+          ) : (
+            <div key={group.label}>
+              <p className="text-[10px] font-bold text-white/25 uppercase tracking-[0.15em] px-3 mb-1.5">
+                {group.label}
+              </p>
+              <div className="flex flex-col gap-0.5">
+                {group.items.map(({ href, label, Icon }) => (
+                  <NavLink
+                    key={href}
+                    href={href}
+                    label={label}
+                    Icon={Icon}
+                    active={pathname === href}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        )}
       </nav>
 
       {/* XP bar */}
-      <div className="mt-5 pt-4 border-t border-white/[0.06] flex flex-col gap-1.5">
+      <div className="mt-4 pt-4 border-t border-white/[0.06] flex flex-col gap-1.5">
         <div className="mx-1 px-3 py-3 rounded-xl bg-gradient-to-br from-cyan-500/8 to-violet-500/8 border border-white/[0.07]">
           <p className="text-[10px] text-white/35 mb-1 uppercase tracking-wider">Skill Level</p>
           <p className="text-xs font-bold text-cyan-400">Junior Network Engineer</p>
@@ -140,12 +233,7 @@ export default function Sidebar() {
           </div>
           <p className="text-[10px] text-white/25 mt-1.5">420 / 1000 XP</p>
         </div>
-
-        <NavLink
-          href="/settings"
-          label="Settings"
-          Icon={Settings}
-        />
+        <NavLink href="/settings" label="Settings" Icon={Settings} active={pathname === "/settings"} />
       </div>
     </aside>
   );
