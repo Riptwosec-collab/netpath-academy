@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getTotalXp, getStreak, touchStreak } from "@/lib/progress";
 import {
   LayoutDashboard, Map, BookOpen, FlaskConical, Brain,
   Wrench, Bot, Trophy, FolderKanban, Network, Settings,
@@ -55,12 +56,13 @@ const navGroups: NavGroup[] = [
     label: "Advanced Tracks",
     collapsible: true,
     items: [
-      { href: "/advanced",                        label: "Advanced Home",         Icon: Award },
-      { href: "/advanced/ai-infrastructure",      label: "AI Infrastructure",     Icon: Cpu },
-      { href: "/advanced/cloud-ai-ops",           label: "Cloud Native & AI Ops", Icon: Server },
-      { href: "/advanced/wireless-mobile",        label: "Wireless & Mobile",     Icon: Radio },
-      { href: "/advanced/security",               label: "Modern Security",       Icon: Shield },
-      { href: "/advanced/hardware-infrastructure",label: "Network Hardware",      Icon: HardDrive },
+      { href: "/advanced",                           label: "Advanced Home",         Icon: Award },
+      { href: "/advanced/network-automation",       label: "Network Automation 🐍", Icon: Terminal },
+      { href: "/advanced/ai-infrastructure",        label: "AI Infrastructure",     Icon: Cpu },
+      { href: "/advanced/cloud-ai-ops",             label: "Cloud Native & AI Ops", Icon: Server },
+      { href: "/advanced/wireless-mobile",          label: "Wireless & Mobile",     Icon: Radio },
+      { href: "/advanced/security",                 label: "Modern Security",       Icon: Shield },
+      { href: "/advanced/hardware-infrastructure",  label: "Network Hardware",      Icon: HardDrive },
     ],
   },
   {
@@ -181,6 +183,17 @@ function CollapsibleGroup({
 // ─── Sidebar ──────────────────────────────────────────────────────
 export default function Sidebar() {
   const pathname = usePathname();
+  const [xp,     setXp]     = useState(0);
+  const [streak, setStreak] = useState(0);
+
+  useEffect(() => {
+    touchStreak();
+    setXp(getTotalXp());
+    setStreak(getStreak());
+  }, []);
+
+  const level  = xp < 500 ? "Intern" : xp < 1500 ? "Junior" : xp < 3000 ? "Mid-level" : "Senior";
+  const barPct = Math.min(100, (xp % 1000) / 10);
 
   return (
     <aside className="hidden md:flex w-60 min-h-screen flex-col flex-shrink-0 bg-white/[0.03] backdrop-blur-xl border-r border-white/[0.07] py-5 px-3">
@@ -224,17 +237,21 @@ export default function Sidebar() {
       {/* XP bar */}
       <div className="mt-4 pt-4 border-t border-white/[0.06] flex flex-col gap-1.5">
         <div className="mx-1 px-3 py-3 rounded-xl bg-gradient-to-br from-cyan-500/8 to-violet-500/8 border border-white/[0.07]">
-          <p className="text-[10px] text-white/35 mb-1 uppercase tracking-wider">Skill Level</p>
-          <p className="text-xs font-bold text-cyan-400">Junior Network Engineer</p>
-          <div className="w-full bg-white/10 rounded-full h-1.5 mt-2 overflow-hidden">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] text-white/35 uppercase tracking-wider">Skill Level</p>
+            {streak > 0 && (
+              <span className="text-[10px] text-orange-400 font-semibold">🔥 {streak}d</span>
+            )}
+          </div>
+          <p className="text-[11px] font-semibold text-white/70">{level}</p>
+          <p className="text-[10px] text-white/30">{xp.toLocaleString()} XP</p>
+          <div className="mt-2 h-1 w-full bg-white/10 rounded-full overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 shadow-[0_0_8px_rgba(56,189,248,0.5)]"
-              style={{ width: "42%" }}
+              className="h-full bg-gradient-to-r from-cyan-500 to-violet-500 rounded-full transition-all duration-700"
+              style={{ width: `${barPct}%` }}
             />
           </div>
-          <p className="text-[10px] text-white/25 mt-1.5">420 / 1000 XP</p>
         </div>
-        <NavLink href="/settings" label="Settings" Icon={Settings} active={pathname === "/settings"} />
       </div>
     </aside>
   );

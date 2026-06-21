@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { allFoundationLessons } from "@/data/foundationCourses";
+import LessonCompleteButton from "@/components/lessons/LessonCompleteButton";
 
 interface Props {
   params: { slug: string };
@@ -278,6 +279,15 @@ export default function FoundationLessonPage({ params }: Props) {
           <Link href="/advanced" className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white text-sm font-medium transition-colors">
             Advanced Tracks →
           </Link>
+        </div>
+
+        {/* Mark Complete */}
+        <div className="mt-10 pt-6 border-t border-gray-700/40 flex justify-center">
+          <LessonCompleteButton
+            lessonId={lesson.slug}
+            track="foundation"
+            xp={lesson.xp}
+          />
         </div>
 
       </div>
