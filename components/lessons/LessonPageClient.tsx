@@ -4,6 +4,11 @@ import { Home } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LessonCompleteButton from "@/components/lessons/LessonCompleteButton";
 import MermaidDiagram from "@/components/lessons/MermaidDiagram";
+import SubnetCalculator from "@/components/interactive/SubnetCalculator";
+import OsiExplorer from "@/components/interactive/OsiExplorer";
+import CliSimulator from "@/components/interactive/CliSimulator";
+import MiniQuiz from "@/components/interactive/MiniQuiz";
+import type { MiniQuestion } from "@/components/interactive/MiniQuiz";
 
 // ─── Types ────────────────────────────────────────────────────────
 type Track = "foundation" | "advanced" | "hardware" | "automation";
@@ -43,6 +48,9 @@ interface LessonData {
   quiz?: Array<unknown>;
   lab?: { duration?: string };
   content?: Array<{ type?: string; title?: string; body: string }>;
+  // Interactive tools
+  interactiveTools?: Array<"subnet-calculator" | "osi-explorer" | "cli-simulator">;
+  miniQuiz?: MiniQuestion[];
   // hardware specific
   deviceRole?: string;
   osiLayer?: string[];
@@ -667,6 +675,30 @@ export default function LessonPageClient({ lesson, prev, next, track }: Props) {
               </ul>
             </div>
           </Section>
+        )}
+
+        {/* Interactive Tools */}
+        {lesson.interactiveTools && lesson.interactiveTools.length > 0 && (
+          <div className="mb-8 space-y-4">
+            <h2 className="text-lg font-semibold text-white">🛠️ Interactive Tools</h2>
+            {lesson.interactiveTools.map((tool) => {
+              if (tool === "subnet-calculator") return <SubnetCalculator key={tool} />;
+              if (tool === "osi-explorer")      return <OsiExplorer key={tool} />;
+              if (tool === "cli-simulator")     return <CliSimulator key={tool} />;
+              return null;
+            })}
+          </div>
+        )}
+
+        {/* Mini Quiz */}
+        {lesson.miniQuiz && lesson.miniQuiz.length > 0 && (
+          <div className="mb-8">
+            <MiniQuiz
+              title="🧠 ทดสอบความเข้าใจ"
+              questions={lesson.miniQuiz}
+              xpReward={Math.round(lesson.xp * 0.3)}
+            />
+          </div>
         )}
 
         {/* Mark Complete */}

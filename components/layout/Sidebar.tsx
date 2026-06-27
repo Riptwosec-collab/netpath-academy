@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { getTotalXp, getStreak, touchStreak } from "@/lib/progress";
+import { getTotalXp, getStreak, touchStreak, resetProgress } from "@/lib/progress";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
   LayoutDashboard, Map, BookOpen, FlaskConical, Brain,
@@ -249,9 +249,12 @@ export default function Sidebar() {
         <div className="mx-1 px-3 py-3 rounded-xl bg-gradient-to-br from-cyan-500/8 to-violet-500/8 border border-white/[0.07]">
           <div className="flex items-center justify-between mb-1">
             <p className="text-[10px] text-white/35 uppercase tracking-wider">{t("common.level")}</p>
-            {streak > 0 && (
-              <span className="text-[10px] text-orange-400 font-semibold">🔥 {streak}{t("common.min").charAt(0)}</span>
-            )}
+            <div className="flex items-center gap-2">
+              {streak > 0 && (
+                <span className="text-[10px] text-orange-400 font-semibold">🔥 {streak}d</span>
+              )}
+              <Link href="/settings" className="text-[9px] text-white/20 hover:text-white/50 transition-colors">⚙</Link>
+            </div>
           </div>
           <p className="text-[11px] font-semibold text-white/70">{level}</p>
           <p className="text-[10px] text-white/30">{xp.toLocaleString()} {t("common.xp")}</p>

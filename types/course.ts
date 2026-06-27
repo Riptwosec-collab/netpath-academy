@@ -95,6 +95,13 @@ export interface Lesson {
   portfolioTask?: PortfolioTask;
   tags: string[];
   order: number;
+  interactiveTools?: Array<"subnet-calculator" | "osi-explorer" | "cli-simulator">;
+  miniQuiz?: Array<{
+    q: string;
+    options: string[];
+    answer: number;
+    explain: string;
+  }>;
 }
 
 // ─── Track definition ────────────────────────────────────────────

@@ -189,6 +189,27 @@ iftop -i eth0`,
   },
   tags: ["Network", "LAN", "WAN", "Fundamentals", "Topology"],
   order: 1,
+  interactiveTools: ["cli-simulator"],
+  miniQuiz: [
+    {
+      q: "LAN ย่อมาจากอะไร?",
+      options: ["Local Area Network", "Large Area Network", "Linked Access Node", "Logical Area Network"],
+      answer: 0,
+      explain: "LAN = Local Area Network เครือข่ายในพื้นที่จำกัดเช่น อาคาร หรือสำนักงาน"
+    },
+    {
+      q: "อุปกรณ์ใดทำหน้าที่ forward packet ระหว่าง network ต่างกัน?",
+      options: ["Router", "Switch", "Hub", "Repeater"],
+      answer: 0,
+      explain: "Router ทำงาน Layer 3 อ่าน IP address เพื่อส่ง packet ไปยัง network ที่ถูกต้อง"
+    },
+    {
+      q: "Full-duplex หมายความว่าอะไร?",
+      options: ["ส่งและรับข้อมูลพร้อมกันได้", "ส่งและรับสลับกัน", "ส่งได้อย่างเดียว", "รับได้อย่างเดียว"],
+      answer: 0,
+      explain: "Full-duplex ส่งและรับพร้อมกันได้ เช่น สายแลน Ethernet ปัจจุบัน"
+    },
+  ],
 };
 
 const osiModel: Lesson = {
@@ -334,6 +355,39 @@ curl -v https://example.com   # ดู HTTP response detail`,
   ],
   tags: ["OSI", "Network", "Layer", "Protocol", "Troubleshooting"],
   order: 2,
+  interactiveTools: ["osi-explorer"],
+  miniQuiz: [
+    {
+      q: "Layer ใดของ OSI ที่ทำหน้าที่ routing ข้ามเครือข่าย?",
+      options: ["Network (L3)", "Data Link (L2)", "Transport (L4)", "Physical (L1)"],
+      answer: 0,
+      explain: "Layer 3 (Network) ใช้ IP address และ routing protocol เพื่อส่ง packet ข้ามเครือข่าย"
+    },
+    {
+      q: "PDU ของ Layer 2 (Data Link) เรียกว่าอะไร?",
+      options: ["Frame", "Packet", "Segment", "Bit"],
+      answer: 0,
+      explain: "Data Link layer ส่งข้อมูลในรูป Frame ซึ่งมี MAC address header และ FCS trailer"
+    },
+    {
+      q: "TCP/UDP ทำงานที่ OSI Layer ใด?",
+      options: ["Transport (L4)", "Network (L3)", "Session (L5)", "Application (L7)"],
+      answer: 0,
+      explain: "Transport Layer (L4) รับผิดชอบ TCP (reliable) และ UDP (fast) ควบคุม port และ flow"
+    },
+    {
+      q: "Device ใดทำงานที่ OSI Layer 3?",
+      options: ["Router", "Switch", "Hub", "Bridge"],
+      answer: 0,
+      explain: "Router ทำงานที่ L3 — อ่าน IP address เพื่อ routing. Switch ทำงานที่ L2 (MAC address)"
+    },
+    {
+      q: "HTTPS ทำงานที่ OSI Layer ใด?",
+      options: ["Application (L7)", "Presentation (L6)", "Session (L5)", "Transport (L4)"],
+      answer: 0,
+      explain: "HTTPS เป็น Application layer protocol — TLS encryption อยู่ที่ L6 (Presentation) แต่ HTTPS โดยรวมอยู่ L7"
+    },
+  ],
 };
 
 const tcpipModel: Lesson = {
@@ -623,6 +677,39 @@ python3 -c "import ipaddress; n=ipaddress.IPv4Network('10.0.0.0/22'); print(list
   },
   tags: ["IPv4", "Subnetting", "CIDR", "VLSM", "IP Address"],
   order: 4,
+  interactiveTools: ["subnet-calculator", "cli-simulator"],
+  miniQuiz: [
+    {
+      q: "IP Address 192.168.1.0/24 มี Usable Host ได้กี่ตัว?",
+      options: ["254", "256", "255", "253"],
+      answer: 0,
+      explain: "2^8 - 2 = 254 — ลบ 2 สำหรับ Network Address (192.168.1.0) และ Broadcast (192.168.1.255)"
+    },
+    {
+      q: "Class C IP Address เริ่มต้น octet แรกที่เท่าไหร่?",
+      options: ["192–223", "128–191", "1–126", "224–239"],
+      answer: 0,
+      explain: "Class C คือ 192–223 — Default Subnet Mask /24 (255.255.255.0)"
+    },
+    {
+      q: "Wildcard Mask ของ /24 คือ?",
+      options: ["0.0.0.255", "255.255.255.0", "0.0.255.255", "255.0.0.0"],
+      answer: 0,
+      explain: "Wildcard = inverse ของ Subnet Mask: 255.255.255.0 → 0.0.0.255"
+    },
+    {
+      q: "CIDR /25 แบ่ง network /24 ได้กี่ subnet?",
+      options: ["2", "4", "8", "16"],
+      answer: 0,
+      explain: "/25 ยืม 1 bit จาก host portion → 2^1 = 2 subnets แต่ละ subnet มี 126 usable hosts"
+    },
+    {
+      q: "Private IP range ใดที่ RFC 1918 กำหนด?",
+      options: ["10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16", "10.0.0.0/8, 172.0.0.0/8, 192.168.0.0/24", "10.0.0.0/16, 172.16.0.0/16, 192.168.0.0/16", "8.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16"],
+      answer: 0,
+      explain: "RFC 1918 กำหนด 3 private ranges: 10/8, 172.16/12, 192.168/16"
+    },
+  ],
 };
 
 const vlanLesson: Lesson = {
@@ -778,6 +865,33 @@ ip routing    ! เปิด routing บน L3 Switch`,
   ],
   tags: ["VLAN", "Trunk", "802.1Q", "Switching", "Segmentation"],
   order: 5,
+  interactiveTools: ["cli-simulator"],
+  miniQuiz: [
+    {
+      q: "VLAN ทำงานที่ OSI Layer ใด?",
+      options: ["Data Link (L2)", "Network (L3)", "Physical (L1)", "Transport (L4)"],
+      answer: 0,
+      explain: "VLAN เป็น L2 technology แบ่ง broadcast domain โดยใช้ IEEE 802.1Q tag ใน Ethernet frame"
+    },
+    {
+      q: "802.1Q VLAN tag มีขนาดกี่ bytes?",
+      options: ["4 bytes", "2 bytes", "8 bytes", "6 bytes"],
+      answer: 0,
+      explain: "802.1Q tag = 4 bytes ประกอบด้วย TPID (2B) + TCI (2B) ซึ่งมี PCP, DEI และ VID 12-bit"
+    },
+    {
+      q: "Native VLAN บน trunk link หมายถึงอะไร?",
+      options: ["VLAN ที่ส่ง frame โดยไม่มี tag", "VLAN สำหรับ management", "VLAN เริ่มต้นบน switch", "VLAN ที่ปลอดภัยที่สุด"],
+      answer: 0,
+      explain: "Native VLAN ส่ง frame แบบ untagged บน trunk link — ค่า default คือ VLAN 1"
+    },
+    {
+      q: "คำสั่งใดใช้ verify VLAN บน Cisco switch?",
+      options: ["show vlan brief", "show ip vlan", "show interface vlan", "show switchport"],
+      answer: 0,
+      explain: "show vlan brief แสดง VLAN ID, Name, Status และ port ที่กำหนด"
+    },
+  ],
 };
 
 const ospfLesson: Lesson = {
@@ -919,6 +1033,33 @@ auto-cost reference-bandwidth 10000   ! 10Gbps reference`,
   ],
   tags: ["OSPF", "Routing", "Link-State", "SPF", "Area"],
   order: 6,
+  interactiveTools: ["cli-simulator"],
+  miniQuiz: [
+    {
+      q: "OSPF ใช้ algorithm อะไรคำนวณ path?",
+      options: ["Dijkstra (SPF)", "Bellman-Ford", "DUAL", "Distance Vector"],
+      answer: 0,
+      explain: "OSPF ใช้ Dijkstra Shortest Path First (SPF) algorithm คำนวณ best path จาก topology database"
+    },
+    {
+      q: "OSPF Hello packet ส่งทุกกี่วินาทีบน Ethernet?",
+      options: ["10 seconds", "30 seconds", "5 seconds", "60 seconds"],
+      answer: 0,
+      explain: "OSPF Hello interval บน broadcast network (Ethernet) = 10 วินาที, Dead interval = 40 วินาที"
+    },
+    {
+      q: "OSPF Router ID คือ?",
+      options: ["32-bit unique identifier ของ router", "IP address ของ interface", "Area number", "Process ID"],
+      answer: 0,
+      explain: "Router ID = 32-bit ID ที่ไม่ซ้ำกัน — เลือกจาก highest loopback IP หรือ highest interface IP"
+    },
+    {
+      q: "OSPF Area 0 เรียกว่าอะไร?",
+      options: ["Backbone Area", "Stub Area", "NSSA Area", "Transit Area"],
+      answer: 0,
+      explain: "Area 0 = Backbone Area ทุก OSPF area ต้องเชื่อมต่อกับ Area 0 โดยตรงหรือผ่าน virtual link"
+    },
+  ],
 };
 
 const bgpLesson: Lesson = {

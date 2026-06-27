@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { resetProgress } from "@/lib/progress";
 
 type Theme = "dark" | "darker" | "light";
 type Language = "th" | "en";
@@ -90,11 +91,16 @@ export default function SettingsPage() {
   function handleResetProgress() {
     if (!resetConfirm) {
       setResetConfirm(true);
-      setTimeout(() => setResetConfirm(false), 4000);
+      setTimeout(() => setResetConfirm(false), 5000);
       return;
     }
     setResetConfirm(false);
-    alert("Progress reset — requires backend integration");
+    resetProgress();
+    // Also clear streak key
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("netpath_streak");
+    }
+    window.location.reload();
   }
 
   return (
