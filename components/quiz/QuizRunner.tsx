@@ -8,8 +8,9 @@ import QuestionCard  from "./QuestionCard";
 import QuizResult    from "./QuizResult";
 import AnswerReview  from "./AnswerReview";
 
-export default function QuizRunner({ quiz }: { quiz: Quiz }) {
+export default function QuizRunner({ quiz, onBack }: { quiz: Quiz; onBack?: () => void }) {
   const router = useRouter();
+  const handleBack = onBack ?? (() => router.push("/quiz"));
 
   /* ── State ────────────────────────────────────────────────────── */
   const [currentIdx,       setCurrentIdx]       = useState(0);
@@ -126,7 +127,7 @@ export default function QuizRunner({ quiz }: { quiz: Quiz }) {
               selectedAnswers={selectedAnswers}
               onRetry={handleRetry}
               onReview={() => setShowReview(true)}
-              onBack={() => router.push("/quiz")}
+              onBack={handleBack}
             />
           </div>
         </div>

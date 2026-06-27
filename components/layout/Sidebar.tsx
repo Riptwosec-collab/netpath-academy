@@ -30,6 +30,7 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     tKey: "sidebar.overview",
+    collapsible: true,
     items: [
       { href: "/dashboard", tKey: "nav.dashboard", Icon: LayoutDashboard },
       { href: "/roadmap",   tKey: "nav.roadmap",   Icon: Map },
@@ -85,6 +86,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     tKey: "sidebar.tools",
+    collapsible: true,
     items: [
       { href: "/search",          tKey: "nav.searchLessons",    Icon: Network },
       { href: "/labs",            tKey: "nav.labs",             Icon: FlaskConical },
@@ -99,6 +101,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     tKey: "sidebar.account",
+    collapsible: true,
     items: [
       { href: "/progress",      tKey: "nav.progress",      Icon: Trophy },
       { href: "/portfolio",     tKey: "nav.portfolio",     Icon: FolderKanban },

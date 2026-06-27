@@ -1,4 +1,4 @@
-import Link from "next/link";
+"use client";
 import type { Quiz } from "@/data/quizzes";
 
 const levelColor: Record<string, string> = {
@@ -14,16 +14,17 @@ const categoryColor: Record<string, string> = {
   Security:   "border-[#ef4444]/25 bg-[#ef4444]/10 text-[#ef4444]/80",
 };
 
-export default function QuizCard({ quiz }: { quiz: Quiz }) {
-  const lvColor  = levelColor[quiz.level]    ?? "border-white/20 bg-white/5 text-white/60";
+export default function QuizCard({ quiz, onClick }: { quiz: Quiz; onClick?: () => void }) {
+  const lvColor  = levelColor[quiz.level]       ?? "border-white/20 bg-white/5 text-white/60";
   const catColor = categoryColor[quiz.category] ?? "border-white/20 bg-white/5 text-white/60";
 
   return (
-    <Link
-      href={`/quiz/${quiz.id}`}
-      className="group relative flex flex-col rounded-2xl border border-white/[0.07] bg-white/[0.03]
+    <button
+      type="button"
+      onClick={onClick}
+      className="group relative flex flex-col text-left rounded-2xl border border-white/[0.07] bg-white/[0.03]
                  hover:border-[#38bdf8]/30 hover:bg-white/[0.05]
-                 transition-all duration-200 overflow-hidden"
+                 transition-all duration-200 overflow-hidden w-full cursor-pointer"
     >
       {/* Top accent */}
       <div className="h-0.5 w-full bg-gradient-to-r from-[#38bdf8]/40 via-[#8b5cf6]/40 to-transparent" />
@@ -53,21 +54,18 @@ export default function QuizCard({ quiz }: { quiz: Quiz }) {
 
         {/* Meta row */}
         <div className="flex flex-wrap items-center gap-3 text-[10px] text-white/30 mt-auto pt-1">
-          {/* Questions */}
           <span className="flex items-center gap-1">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             {quiz.questions.length} ข้อ
           </span>
-          {/* Duration */}
           <span className="flex items-center gap-1">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             {quiz.duration}
           </span>
-          {/* Passing score */}
           <span className="flex items-center gap-1">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -93,6 +91,6 @@ export default function QuizCard({ quiz }: { quiz: Quiz }) {
           </span>
         </div>
       </div>
-    </Link>
+    </button>
   );
 }

@@ -1,8 +1,16 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { labs, labStats, labCategories } from "@/data/labs";
-import LabCard from "@/components/labs/LabCard";
+import { labs, labStats, labCategories, getLabById } from "@/data/labs";
+import LabCard       from "@/components/labs/LabCard";
+import LabHeader     from "@/components/labs/LabHeader";
+import LabTopology   from "@/components/labs/LabTopology";
+import LabIpTable    from "@/components/labs/LabIpTable";
+import LabTaskList   from "@/components/labs/LabTaskList";
+import LabHintBox    from "@/components/labs/LabHintBox";
+import LabTroubleshooting from "@/components/labs/LabTroubleshooting";
+import LabSolution   from "@/components/labs/LabSolution";
+import SlideDrawer   from "@/components/ui/SlideDrawer";
 import type { LabLevel, LabStatus } from "@/data/labs";
 
 const LEVELS:   (LabLevel  | "All")[] = ["All", "Beginner", "Intermediate", "Advanced"];
@@ -20,6 +28,10 @@ export default function LabsPage() {
   const [category, setCategory] = useState("All");
   const [level,    setLevel]    = useState<LabLevel | "All">("All");
   const [status,   setStatus]   = useState<LabStatus | "All">("All");
+
+  /* ── Drawer state ───────────────────────────────────────────── */
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeLab = activeId ? getLabById(activeId) : null;
 
   const filtered = useMemo(() => {
     return labs.filter((lab) => {
@@ -156,7 +168,7 @@ export default function LabsPage() {
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((lab) => (
-            <LabCard key={lab.id} lab={lab} />
+            <LabCard key={lab.id} lab={lab} onClick={() => setActiveId(lab.id)} />
           ))}
         </div>
       ) : (
@@ -178,6 +190,27 @@ export default function LabsPage() {
           </button>
         </div>
       )}
+      {/* ── Lab Detail Drawer ─────────────────────────────── */}
+      <SlideDrawer
+        open={!!activeLab}
+        onClose={() => setActiveId(null)}
+        title={activeLab?.title}
+        size="xl"
+      >
+        {activeLab && (
+          <div className="p-5 space-y-5">
+            <LabHeader lab={activeLab} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <LabTopology lab={activeLab} />
+              <LabIpTable  lab={activeLab} />
+            </div>
+            <LabTaskList lab={activeLab} />
+            <LabHintBox  lab={activeLab} />
+            <LabTroubleshooting lab={activeLab} />
+            <LabSolution lab={activeLab} />
+          </div>
+        )}
+      </SlideDrawer>
     </div>
   );
 }
