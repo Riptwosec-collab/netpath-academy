@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Search, X, BookOpen, Cpu, Server, Shield, HardDrive, Wifi, FlaskConical, HelpCircle, ChevronRight } from "lucide-react";
+import { Search, X, BookOpen, Cpu, Server, Shield, HardDrive, Wifi, FlaskConical, HelpCircle, ChevronRight, Home } from "lucide-react";
 
 type Track = "foundation" | "ai-infrastructure" | "cloud-ai-ops" | "wireless-mobile" | "security" | "hardware";
 type Level = "Beginner" | "Intermediate" | "Advanced" | "Expert";
@@ -104,11 +104,21 @@ export default function SearchPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-12">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Search Lessons</h1>
-        <p className="text-sm text-white/40 mt-1">
-          ค้นหา Lesson จาก Foundation, Advanced และ Hardware — {ALL_LESSONS.length} บทเรียน
-        </p>
+      {/* Header + Home button */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Search Lessons</h1>
+          <p className="text-sm text-white/40 mt-1">
+            ค้นหา Lesson จาก Foundation, Advanced และ Hardware — {ALL_LESSONS.length} บทเรียน
+          </p>
+        </div>
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white hover:border-white/20 hover:bg-white/[0.07] transition-all text-xs font-medium flex-shrink-0"
+        >
+          <Home size={13} />
+          <span>หน้าหลัก</span>
+        </Link>
       </div>
 
       {/* Search Bar */}
