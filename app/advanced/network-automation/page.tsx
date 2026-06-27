@@ -31,6 +31,16 @@ export default function NetworkAutomationPage() {
     <div className="min-h-screen bg-[#050816] text-gray-200">
       <div className="max-w-5xl mx-auto px-6 py-10">
 
+        {/* Home button */}
+        <div className="flex items-center gap-3 mb-5 flex-wrap">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white hover:border-white/20 hover:bg-white/[0.07] transition-all text-xs font-medium"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Dashboard
+          </Link>
+        </div>
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
           <Link href="/advanced" className="hover:text-emerald-400 transition-colors">Advanced Tracks</Link>
