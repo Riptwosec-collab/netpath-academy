@@ -128,43 +128,35 @@ export default function AutomationLessonPage({ params }: Props) {
           </Section>
         )}
 
-        {/* Lab */}
-        {lesson.lab && (
-          <Section title="🔬 Lab">
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5">
-              <h3 className="text-sm font-bold text-emerald-300 mb-1">{lesson.lab.title}</h3>
-              <p className="text-xs text-gray-400 mb-3">{lesson.lab.description}</p>
-              <div className="flex gap-4 text-xs text-gray-500">
-                <span>⏱ {lesson.lab.duration}</span>
-                <span>📊 {lesson.lab.difficulty}</span>
+        {/* Lab & Quiz Navigation Cards */}
+        <div className="mb-8 grid sm:grid-cols-2 gap-4">
+          {lesson.lab && (
+            <Link
+              href={`/advanced/network-automation/lessons/${lesson.slug}/lab`}
+              className="group flex items-center gap-4 p-5 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.04] hover:bg-emerald-500/10 hover:border-emerald-500/40 transition-all duration-200"
+            >
+              <span className="text-3xl">🔬</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-emerald-300 group-hover:text-emerald-200 transition-colors">Hands-on Lab</p>
+                <p className="text-xs text-gray-500 mt-0.5">{lesson.lab.duration ?? ''} · ฝึกจากของจริง</p>
               </div>
-              {lesson.lab.objectives && (
-                <ul className="mt-3 space-y-1">
-                  {lesson.lab.objectives.map((obj: string, i: number) => (
-                    <li key={i} className="text-xs text-gray-400 flex gap-2">
-                      <span className="text-emerald-500">→</span>{obj}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </Section>
-        )}
-
-        {/* Quiz preview */}
-        {lesson.quiz && lesson.quiz.length > 0 && (
-          <Section title={`📝 Quiz — ${lesson.quiz.length} questions`}>
-            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
-              <p className="text-xs text-gray-400">ทดสอบความเข้าใจหลังจบ lesson ด้วย {lesson.quiz.length} ข้อ</p>
-              <Link
-                href={`/quiz`}
-                className="mt-3 inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                ไปยัง Quiz Center →
-              </Link>
-            </div>
-          </Section>
-        )}
+              <span className="text-emerald-500/50 group-hover:text-emerald-400 transition-colors text-lg">→</span>
+            </Link>
+          )}
+          {lesson.quiz && lesson.quiz.length > 0 && (
+            <Link
+              href={`/advanced/network-automation/lessons/${lesson.slug}/quiz`}
+              className="group flex items-center gap-4 p-5 rounded-2xl border border-cyan-500/25 bg-cyan-500/[0.04] hover:bg-cyan-500/10 hover:border-cyan-500/40 transition-all duration-200"
+            >
+              <span className="text-3xl">📝</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-cyan-300 group-hover:text-cyan-200 transition-colors">ทำ Quiz</p>
+                <p className="text-xs text-gray-500 mt-0.5">{lesson.quiz.length} ข้อ · เฉลยหลังทำเสร็จ</p>
+              </div>
+              <span className="text-cyan-500/50 group-hover:text-cyan-400 transition-colors text-lg">→</span>
+            </Link>
+          )}
+        </div>
 
         {/* Interview questions */}
         {lesson.interviewQuestions && lesson.interviewQuestions.length > 0 && (

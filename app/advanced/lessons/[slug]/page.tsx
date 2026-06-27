@@ -120,26 +120,35 @@ export default function AdvancedLessonPage({ params }: Props) {
           </Section>
         )}
 
-        {/* Labs */}
-        {lesson.labs.length > 0 && (
-          <Section title="🧪 Labs">
-            {lesson.labs.map((lab, i) => (
-              <div key={i} className="mb-4 p-4 rounded-xl border border-violet-500/20 bg-violet-500/5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-violet-400">{lab.title}</h3>
-                  {lab.estimatedMinutes && <span className="text-xs text-gray-500">{lab.estimatedMinutes} min</span>}
-                </div>
-                <ol className="space-y-1.5">
-                  {lab.steps.map((step, si) => (
-                    <li key={si} className="flex gap-2 text-xs text-gray-300">
-                      <span className="text-violet-400 shrink-0 font-bold">{si+1}.</span>{step}
-                    </li>
-                  ))}
-                </ol>
+        {/* Lab & Quiz Navigation Cards */}
+        <div className="mb-8 grid sm:grid-cols-2 gap-4">
+          {lesson.labs.length > 0 && (
+            <Link
+              href={`/advanced/lessons/${lesson.slug}/lab`}
+              className="group flex items-center gap-4 p-5 rounded-2xl border border-violet-500/25 bg-violet-500/[0.04] hover:bg-violet-500/10 hover:border-violet-500/40 transition-all duration-200"
+            >
+              <span className="text-3xl">🔬</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-violet-300 group-hover:text-violet-200 transition-colors">Hands-on Lab</p>
+                <p className="text-xs text-gray-500 mt-0.5">{lesson.labs.length} lab{lesson.labs.length > 1 ? 's' : ''} · ฝึกจากของจริง</p>
               </div>
-            ))}
-          </Section>
-        )}
+              <span className="text-violet-500/50 group-hover:text-violet-400 transition-colors text-lg">→</span>
+            </Link>
+          )}
+          {lesson.quiz.length > 0 && (
+            <Link
+              href={`/advanced/lessons/${lesson.slug}/quiz`}
+              className="group flex items-center gap-4 p-5 rounded-2xl border border-cyan-500/25 bg-cyan-500/[0.04] hover:bg-cyan-500/10 hover:border-cyan-500/40 transition-all duration-200"
+            >
+              <span className="text-3xl">📝</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-cyan-300 group-hover:text-cyan-200 transition-colors">ทำ Quiz</p>
+                <p className="text-xs text-gray-500 mt-0.5">{lesson.quiz.length} ข้อ · เฉลยหลังทำเสร็จ</p>
+              </div>
+              <span className="text-cyan-500/50 group-hover:text-cyan-400 transition-colors text-lg">→</span>
+            </Link>
+          )}
+        </div>
 
         {/* Troubleshooting */}
         {lesson.troubleshooting.length > 0 && (
@@ -159,26 +168,6 @@ export default function AdvancedLessonPage({ params }: Props) {
           </Section>
         )}
 
-        {/* Quiz */}
-        {lesson.quiz.length > 0 && (
-          <Section title="🧠 Quiz">
-            <div className="space-y-4">
-              {lesson.quiz.map((q, i) => (
-                <div key={i} className="p-4 rounded-xl border border-gray-700/40 bg-gray-800/20">
-                  <p className="text-sm font-medium text-gray-200 mb-3">{i+1}. {q.question}</p>
-                  <div className="grid sm:grid-cols-2 gap-2 mb-3">
-                    {q.choices.map((c, ci) => (
-                      <div key={ci} className={`text-xs px-3 py-2 rounded-lg border ${c === q.answer ? "border-green-500/40 bg-green-500/10 text-green-300" : "border-gray-700/30 text-gray-400"}`}>
-                        {String.fromCharCode(65+ci)}. {c}
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500 border-t border-gray-700/30 pt-2">💡 {q.explanation}</p>
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
 
         {/* Portfolio Task */}
         {lesson.portfolioTask && (
