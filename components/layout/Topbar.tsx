@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, Bell, Zap } from "lucide-react";
+import Link from "next/link";
+import { Search, Bell, Zap, Home } from "lucide-react";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -15,6 +16,15 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
 
   return (
     <header className="h-14 flex-shrink-0 border-b border-white/[0.07] flex items-center gap-3 px-4 md:px-6 bg-[#050816]/70 backdrop-blur-xl">
+      {/* Home button — mobile only (sidebar hidden on mobile) */}
+      <Link
+        href="/dashboard"
+        className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.08] text-white/40 hover:text-cyan-400 hover:border-cyan-500/30 transition-all flex-shrink-0"
+        aria-label="Home"
+      >
+        <Home size={15} />
+      </Link>
+
       {/* Page title */}
       <div className="flex-1 min-w-0">
         <h1 className="text-base font-semibold text-white/90 truncate">{displayTitle}</h1>

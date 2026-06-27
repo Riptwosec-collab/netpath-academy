@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { Home } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LessonCompleteButton from "@/components/lessons/LessonCompleteButton";
 import MermaidDiagram from "@/components/lessons/MermaidDiagram";
@@ -285,21 +286,30 @@ export default function LessonPageClient({ lesson, prev, next, track }: Props) {
     <div className="min-h-screen bg-[#050816] text-gray-200">
       <div className="max-w-4xl mx-auto px-6 py-10">
 
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-6 flex-wrap">
-          {cfg.breadcrumbs.map((crumb, i) => (
-            <span key={i} className="flex items-center gap-2">
-              <Link href={crumb.href} className={`${accentHover} transition-colors`}>{t(crumb.label)}</Link>
-              <span>/</span>
-            </span>
-          ))}
-          {track === "hardware" && lesson.category && (
-            <span className="flex items-center gap-2">
-              <Link href={`/hardware/${lesson.category}`} className={`${accentHover} capitalize transition-colors`}>{lesson.category}</Link>
-              <span>/</span>
-            </span>
-          )}
-          <span className="text-gray-300">{lang === "th" && lesson.titleTh ? lesson.titleTh : lesson.title}</span>
+        {/* Top nav bar: Home button + Breadcrumb */}
+        <div className="flex items-center gap-3 mb-6 flex-wrap">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white hover:border-white/20 hover:bg-white/[0.07] transition-all text-xs font-medium flex-shrink-0"
+          >
+            <Home size={13} />
+            <span>{t("nav.dashboard")}</span>
+          </Link>
+          <div className="flex items-center gap-2 text-sm text-gray-500 flex-wrap">
+            {cfg.breadcrumbs.map((crumb, i) => (
+              <span key={i} className="flex items-center gap-2">
+                <Link href={crumb.href} className={`${accentHover} transition-colors`}>{t(crumb.label)}</Link>
+                <span>/</span>
+              </span>
+            ))}
+            {track === "hardware" && lesson.category && (
+              <span className="flex items-center gap-2">
+                <Link href={`/hardware/${lesson.category}`} className={`${accentHover} capitalize transition-colors`}>{lesson.category}</Link>
+                <span>/</span>
+              </span>
+            )}
+            <span className="text-gray-300">{lang === "th" && lesson.titleTh ? lesson.titleTh : lesson.title}</span>
+          </div>
         </div>
 
         {/* Header */}

@@ -3,41 +3,41 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   LayoutDashboard, BookOpen, FlaskConical, Bot, Menu, X,
   Map, Brain, Wrench, Trophy, FolderKanban, Network, Settings,
-  type LucideIcon,
+  Home, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Bottom tab items ─────────────────────────────────────────────
-const TABS: { href: string; label: string; Icon: LucideIcon; isMenu?: boolean }[] = [
-  { href: "/dashboard", label: "Home",    Icon: LayoutDashboard },
-  { href: "/courses",   label: "Courses", Icon: BookOpen },
-  { href: "/labs",      label: "Labs",    Icon: FlaskConical },
-  { href: "/ai-tutor",  label: "AI",      Icon: Bot },
-  { href: "#menu",      label: "More",    Icon: Menu, isMenu: true },
+const TABS: { href: string; tKey: string; Icon: LucideIcon; isMenu?: boolean }[] = [
+  { href: "/dashboard",  tKey: "nav.dashboard", Icon: Home },
+  { href: "/courses",    tKey: "nav.courses",   Icon: BookOpen },
+  { href: "/labs",       tKey: "nav.labs",      Icon: FlaskConical },
+  { href: "/ai-tutor",   tKey: "nav.aiTutor",   Icon: Bot },
+  { href: "#menu",       tKey: "common.more",   Icon: Menu, isMenu: true },
 ];
 
 // ─── Drawer items ─────────────────────────────────────────────────
-const DRAWER: { href: string; label: string; Icon: LucideIcon }[] = [
-  { href: "/roadmap",         label: "Roadmap",         Icon: Map },
-  { href: "/quiz",            label: "Quiz",            Icon: Brain },
-  { href: "/troubleshooting", label: "Troubleshooting", Icon: Wrench },
-  { href: "/progress",        label: "Progress",        Icon: Trophy },
-  { href: "/portfolio",       label: "Portfolio",       Icon: FolderKanban },
-  { href: "/tools",           label: "Tools",           Icon: Network },
-  { href: "/settings",        label: "Settings",        Icon: Settings },
+const DRAWER: { href: string; tKey: string; Icon: LucideIcon }[] = [
+  { href: "/roadmap",         tKey: "nav.roadmap",         Icon: Map },
+  { href: "/quiz",            tKey: "nav.quiz",            Icon: Brain },
+  { href: "/troubleshooting", tKey: "nav.troubleshooting", Icon: Wrench },
+  { href: "/progress",        tKey: "nav.progress",        Icon: Trophy },
+  { href: "/portfolio",       tKey: "nav.portfolio",       Icon: FolderKanban },
+  { href: "/tools",           tKey: "nav.tools",           Icon: Network },
+  { href: "/settings",        tKey: "nav.settings",        Icon: Settings },
 ];
 
 export default function MobileNav() {
-  const pathname = usePathname();
+  const pathname      = usePathname();
+  const { t }         = useLanguage();
   const [open, setOpen] = useState(false);
 
-  // Close drawer on route change
   useEffect(() => { setOpen(false); }, [pathname]);
 
-  // Lock body scroll when drawer is open
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -51,7 +51,7 @@ export default function MobileNav() {
         aria-label="Mobile navigation"
       >
         <div className="flex justify-around items-end py-2 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
-          {TABS.map(({ href, label, Icon, isMenu }) => {
+          {TABS.map(({ href, tKey, Icon, isMenu }) => {
             const active = !isMenu && (pathname === href || pathname.startsWith(href + "/"));
             const isOpenMenu = isMenu && open;
 
@@ -70,7 +70,7 @@ export default function MobileNav() {
                   "text-[10px] font-medium",
                   (active || isOpenMenu) ? "text-cyan-400" : "text-white/25",
                 )}>
-                  {label}
+                  {t(tKey)}
                 </span>
               </div>
             );
@@ -80,7 +80,7 @@ export default function MobileNav() {
                 <button
                   key="menu"
                   onClick={() => setOpen((v) => !v)}
-                  aria-label="Open navigation menu"
+                  aria-label={t("common.more")}
                   aria-expanded={open}
                   className="flex-1"
                 >
@@ -100,7 +100,7 @@ export default function MobileNav() {
 
       {/* ── Slide drawer ───────────────────────────────────────── */}
       {open && (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Navigation drawer">
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true">
           {/* Overlay */}
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -115,18 +115,28 @@ export default function MobileNav() {
             {/* Close button */}
             <button
               onClick={() => setOpen(false)}
-              aria-label="Close menu"
+              aria-label={t("common.close")}
               className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/5 transition-all"
             >
               <X size={16} />
             </button>
 
-            <p className="text-[11px] font-bold text-white/25 uppercase tracking-widest mb-4 px-1">
-              All Features
+            {/* Home shortcut */}
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 text-sm font-semibold"
+              onClick={() => setOpen(false)}
+            >
+              <Home size={15} />
+              {t("nav.dashboard")}
+            </Link>
+
+            <p className="text-[11px] font-bold text-white/25 uppercase tracking-widest mb-3 px-1">
+              {t("sidebar.tools")}
             </p>
 
             <div className="grid grid-cols-2 gap-2">
-              {DRAWER.map(({ href, label, Icon }) => {
+              {DRAWER.map(({ href, tKey, Icon }) => {
                 const active = pathname === href || pathname.startsWith(href + "/");
                 return (
                   <Link
@@ -140,7 +150,7 @@ export default function MobileNav() {
                     )}
                   >
                     <Icon size={15} className={active ? "text-cyan-400" : "text-white/30"} />
-                    {label}
+                    {t(tKey)}
                   </Link>
                 );
               })}

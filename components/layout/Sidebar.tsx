@@ -204,16 +204,16 @@ export default function Sidebar() {
 
   return (
     <aside className="hidden md:flex w-60 min-h-screen flex-col flex-shrink-0 bg-white/[0.03] backdrop-blur-xl border-r border-white/[0.07] py-5 px-3">
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-3 mb-6">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center shadow-[0_0_12px_rgba(56,189,248,0.4)]">
+      {/* Logo → Home */}
+      <Link href="/dashboard" className="flex items-center gap-2.5 px-3 mb-6 group">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center shadow-[0_0_12px_rgba(56,189,248,0.4)] group-hover:shadow-[0_0_18px_rgba(56,189,248,0.6)] transition-shadow">
           <Wifi size={16} className="text-white" />
         </div>
         <div className="leading-none">
           <p className="text-sm font-bold text-white">NetPath</p>
           <p className="text-[11px] font-semibold text-cyan-400 tracking-wide">ACADEMY</p>
         </div>
-      </div>
+      </Link>
 
       {/* Nav */}
       <nav className="flex flex-col gap-4 flex-1 overflow-y-auto scrollbar-none pr-0.5">

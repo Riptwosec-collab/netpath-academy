@@ -115,6 +115,7 @@ const en: Record<string, string> = {
   "common.success":       "Success",
   "common.warning":       "Warning",
   "common.info":          "Info",
+  "common.more":          "More",
 
   // ── Level names ──────────────────────────────────────────────────
   "level.beginner":      "Beginner",
@@ -433,6 +434,7 @@ const th: Record<string, string> = {
   "common.success":       "สำเร็จ",
   "common.warning":       "คำเตือน",
   "common.info":          "ข้อมูล",
+  "common.more":          "เพิ่มเติม",
 
   // ── Level names ──────────────────────────────────────────────────
   "level.beginner":      "เริ่มต้น",
