@@ -16,6 +16,8 @@ export interface TopologyLink {
   from: string;
   to:   string;
   port?: string;
+  label?: string;
+  bandwidth?: string;
   devices?: string[];
 }
 
@@ -2532,6 +2534,749 @@ show authentication sessions
 test aaa group tacacs+ admin Pass@123 new-code`,
     roadmapLevel: 4,
   },
+
+  /* ══════════════════════════════════════════════════════════
+   * NEW LABS — AI, Cloud, Security, Automation, Hardware
+   * ══════════════════════════════════════════════════════════ */
+
+  /* ── 1. GPU Cluster RDMA/RoCE Lab ──────────────────────────── */
+  {
+    id:          "gpu-rdma-roce-lab",
+    title:       "GPU Cluster RDMA/RoCE v2 Configuration Lab",
+    category:    "AI Infrastructure",
+    level:       "Advanced",
+    duration:    "90 min",
+    status:      "available",
+    description: "ตั้งค่า RoCE v2 บน Data Center Switch สำหรับ GPU Cluster — เปิด PFC, ECN, Jumbo Frame เพื่อให้ได้ Lossless Network",
+    scenario:    "ทีม AI Infrastructure ต้องการ deploy GPU Training Cluster 8 โหนด ใช้ A100 GPU + ConnectX-7 NIC บน Spine-Leaf Fabric 400G โดยต้องการ Lossless RDMA สำหรับ AllReduce operation",
+    objective:   "Config PFC priority 3, ECN marking, Jumbo Frame 9216 และ verify RDMA traffic ผ่าน RoCE v2 ได้โดยไม่มี packet loss",
+    devices:     ["Spine1 (Arista 7800)", "Leaf1 (Arista 7050CX3)", "Leaf2 (Arista 7050CX3)", "GPU-Node1", "GPU-Node2"],
+    topology: {
+      devices: [
+        { name: "Spine1",    type: "switch", ip: "10.0.0.1" },
+        { name: "Leaf1",     type: "switch", ip: "10.0.1.1" },
+        { name: "Leaf2",     type: "switch", ip: "10.0.2.1" },
+        { name: "GPU-Node1", type: "server", ip: "192.168.10.101" },
+        { name: "GPU-Node2", type: "server", ip: "192.168.10.102" },
+      ],
+      links: [
+        { from: "Spine1", to: "Leaf1",     port: "Et1/1 <-> Et49 (400G)" },
+        { from: "Spine1", to: "Leaf2",     port: "Et1/2 <-> Et49 (400G)" },
+        { from: "Leaf1",  to: "GPU-Node1", port: "Et1 <-> eth0 (100G)" },
+        { from: "Leaf2",  to: "GPU-Node2", port: "Et1 <-> eth0 (100G)" },
+      ],
+    },
+    ipTable: [
+      { device: "Leaf1",     interface: "Et49",   ip: "10.0.1.2",       subnet: "255.255.255.252", gateway: "-" },
+      { device: "Leaf1",     interface: "Vlan10",  ip: "192.168.10.1",   subnet: "255.255.255.0",   gateway: "-" },
+      { device: "Leaf2",     interface: "Et49",   ip: "10.0.2.2",       subnet: "255.255.255.252", gateway: "-" },
+      { device: "Leaf2",     interface: "Vlan10",  ip: "192.168.10.129", subnet: "255.255.255.0",   gateway: "-" },
+      { device: "GPU-Node1", interface: "eth0",   ip: "192.168.10.101", subnet: "255.255.255.0",   gateway: "192.168.10.1" },
+      { device: "GPU-Node2", interface: "eth0",   ip: "192.168.10.102", subnet: "255.255.255.0",   gateway: "192.168.10.129" },
+    ],
+    tasks: [
+      "Enable Jumbo Frame MTU 9216 บนทุก interface ที่เชื่อม GPU: mtu 9216 ใต้ interface",
+      "Config QoS map CoS 3 to DSCP 26 (AF31) สำหรับ RDMA traffic",
+      "เปิด PFC Priority 3 บน Leaf switch: priority-flow-control mode on ใต้ interface",
+      "Config ECN marking threshold 100KB/300KB บน queue 3",
+      "ตั้ง Bandwidth guarantee queue 3 → 50% minimum ใน scheduler",
+      "Enable RDMA/RoCE บน GPU-Node: rdma link add rxe0 type rxe; rdma dev set rxe0 netdev eth0",
+      "ทดสอบ: ib_send_bw -d rxe0 (GPU-Node2 เป็น server, GPU-Node1 เป็น client)",
+      "Verify ไม่มี PFC pause storm: show interfaces ethernet1 counters pfc",
+    ],
+    hints: [
+      "PFC ต้องเปิดทั้ง switch side และ NIC side ถ้าเปิดแค่ข้างเดียวจะเกิด HOL blocking",
+      "Jumbo Frame ต้อง match ทุก hop — ถ้า MTU mismatch จะได้ fragmentation ทำให้ RDMA latency สูง",
+      "ECN threshold ตั้งต่ำเกินไปทำให้ mark มากเกิน GPU ลด rate แรง throughput ต่ำ",
+      "ib_send_bw output ดู BW ได้ ถ้าได้ >90% line-rate ถือว่า config ถูกต้อง",
+    ],
+    expectedResult: "ib_send_bw แสดง bandwidth >= 90 Gb/s; show interfaces counters pfc ไม่มี storm; ping jumbo 9000 bytes ระหว่าง GPU nodes ได้",
+    troubleshooting: [
+      "PFC storm Leaf switch CPU spike: ตรวจ show interfaces Et1 counters pfc pause, ถ้า pause frame สูงมาก ให้ตรวจ NIC driver PFC config ของ server",
+      "ib_send_bw ได้ bandwidth ต่ำมาก (<10 Gb/s): ตรวจ rdma link show ว่า state Active, ตรวจ MTU mismatch ด้วย ping -s 8972 -M do",
+      "Jumbo ping fail: ip link set eth0 mtu 9000 บน server, ตรวจ switch interface mtu ต้องเป็น 9216",
+    ],
+    solution: `! Arista Leaf config
+interface Ethernet1
+   mtu 9216
+   priority-flow-control mode on
+   priority-flow-control priority 3 no-drop
+!
+! Linux GPU Node
+ip link set eth0 mtu 9000
+rdma link add rxe0 type rxe
+rdma dev set rxe0 netdev eth0
+! Server (ib_send_bw)
+ib_send_bw -d rxe0
+! Client
+ib_send_bw -d rxe0 192.168.10.102`,
+    roadmapLevel: 5,
+    technology:  "AI Infrastructure",
+    points:      250,
+  },
+
+  /* ── 2. Kubernetes Calico CNI Lab ───────────────────────────── */
+  {
+    id:          "k8s-calico-cni-lab",
+    title:       "Kubernetes Calico CNI and NetworkPolicy Lab",
+    category:    "Cloud Native",
+    level:       "Advanced",
+    duration:    "75 min",
+    status:      "available",
+    description: "Deploy Calico CNI บน Kubernetes cluster, สร้าง NetworkPolicy ที่ allow เฉพาะ specific Pod-to-Pod traffic และ deny ทุก traffic ที่ไม่ได้ระบุ",
+    scenario:    "บริษัท FinTech ต้องการ deploy microservices บน Kubernetes โดย frontend Pod ต้อง reach backend ได้แต่ database ต้อง accessible เฉพาะ backend เท่านั้น",
+    objective:   "ติดตั้ง Calico, สร้าง default-deny NetworkPolicy และ allow-specific policies แล้ว verify ด้วย kubectl exec",
+    devices:     ["Master Node", "Worker Node 1", "Worker Node 2"],
+    topology: {
+      devices: [
+        { name: "master",  type: "server", ip: "10.0.0.10" },
+        { name: "worker1", type: "server", ip: "10.0.0.11" },
+        { name: "worker2", type: "server", ip: "10.0.0.12" },
+      ],
+      links: [
+        { from: "master",  to: "worker1", label: "Kubernetes API" },
+        { from: "master",  to: "worker2", label: "Kubernetes API" },
+      ],
+    },
+    ipTable: [
+      { device: "master",   interface: "eth0",    ip: "10.0.0.10",   subnet: "255.255.255.0", gateway: "10.0.0.1" },
+      { device: "worker1",  interface: "eth0",    ip: "10.0.0.11",   subnet: "255.255.255.0", gateway: "10.0.0.1" },
+      { device: "worker2",  interface: "eth0",    ip: "10.0.0.12",   subnet: "255.255.255.0", gateway: "10.0.0.1" },
+      { device: "Pod CIDR", interface: "virtual", ip: "192.168.0.0", subnet: "255.255.0.0",   gateway: "-", notes: "Calico Pod network" },
+    ],
+    tasks: [
+      "ติดตั้ง Calico CNI: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml",
+      "Verify Calico pods running: kubectl get pods -n kube-system | grep calico",
+      "Deploy 3 Pods: frontend (nginx), backend (httpd), database (mysql) ด้วย label tier=frontend/backend/database",
+      "สร้าง default-deny-all NetworkPolicy ใน namespace default",
+      "สร้าง NetworkPolicy allow frontend to backend port 80",
+      "สร้าง NetworkPolicy allow backend to database port 3306",
+      "ทดสอบ: kubectl exec frontend -- curl backend:80 ต้องสำเร็จ",
+      "ทดสอบ: kubectl exec frontend -- curl database:3306 ต้องถูก block (timeout)",
+    ],
+    hints: [
+      "NetworkPolicy podSelector: {} เลือก ALL pods ใน namespace ระวัง default-deny จะ block calico health check ด้วย",
+      "ingress rule ต้องระบุ from.podSelector ให้ match label ที่ Pod มีจริง",
+      "ใช้ kubectl exec <pod> -- nc -zv <target> <port> แทน curl ถ้า Pod ไม่มี curl",
+      "calicoctl get networkpolicy -A ดู policy ทั้งหมดที่ Calico เห็น",
+    ],
+    expectedResult: "frontend curl backend สำเร็จ (200 OK); frontend curl database timeout (blocked); backend curl database สำเร็จ; kubectl get networkpolicy แสดง 3 policies",
+    troubleshooting: [
+      "Calico pod CrashLoopBackOff: ตรวจ kubectl logs -n kube-system calico-node-xxx มักเกิดจาก CALICO_IPV4POOL_CIDR ทับกับ Node CIDR",
+      "NetworkPolicy ไม่ block traffic: ตรวจว่า Calico CNI ทำงานจริง flannel ไม่รองรับ NetworkPolicy",
+      "Pod ไม่ได้ IP: kubectl describe pod xxx ดู Events ถ้า CNI plugin not found ต้องติดตั้ง Calico ใหม่",
+    ],
+    solution: `# default-deny-all
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+# allow frontend to backend
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-to-backend
+spec:
+  podSelector:
+    matchLabels:
+      tier: backend
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: frontend
+    ports:
+    - port: 80`,
+    roadmapLevel: 4,
+    technology:  "Cloud Native",
+    points:      200,
+  },
+
+  /* ── 3. Ansible Network Automation Lab ─────────────────────── */
+  {
+    id:          "ansible-network-lab",
+    title:       "Ansible Network Automation Multi-device Config Push",
+    category:    "Network Automation",
+    level:       "Intermediate",
+    duration:    "60 min",
+    status:      "available",
+    description: "ใช้ Ansible เพื่อ push configuration ไปยัง Router และ Switch หลายตัวพร้อมกัน รวมถึง backup config อัตโนมัติ",
+    scenario:    "Network team มี Router 3 ตัวและ Switch 4 ตัว ต้องการ automate การ push NTP server config ทุกตัว และ backup running-config ทุกคืน",
+    objective:   "เขียน Ansible playbook สำหรับ push NTP config และ backup running-config จาก Cisco IOS devices ทั้งหมด",
+    devices:     ["Ansible Control Node", "R1 (192.168.1.1)", "R2 (192.168.1.2)", "R3 (192.168.1.3)", "SW1 (192.168.1.11)", "SW2 (192.168.1.12)"],
+    topology: {
+      devices: [
+        { name: "Ansible Node", type: "server", ip: "192.168.1.100" },
+        { name: "R1",           type: "router", ip: "192.168.1.1" },
+        { name: "R2",           type: "router", ip: "192.168.1.2" },
+        { name: "R3",           type: "router", ip: "192.168.1.3" },
+        { name: "SW1",          type: "switch", ip: "192.168.1.11" },
+        { name: "SW2",          type: "switch", ip: "192.168.1.12" },
+      ],
+      links: [
+        { from: "Ansible Node", to: "R1",  label: "SSH mgmt" },
+        { from: "Ansible Node", to: "SW1", label: "SSH mgmt" },
+      ],
+    },
+    ipTable: [
+      { device: "Ansible Node", interface: "eth0",  ip: "192.168.1.100", subnet: "255.255.255.0", gateway: "192.168.1.254" },
+      { device: "R1",           interface: "Gi0/0", ip: "192.168.1.1",   subnet: "255.255.255.0", gateway: "-" },
+      { device: "R2",           interface: "Gi0/0", ip: "192.168.1.2",   subnet: "255.255.255.0", gateway: "-" },
+      { device: "R3",           interface: "Gi0/0", ip: "192.168.1.3",   subnet: "255.255.255.0", gateway: "-" },
+      { device: "SW1",          interface: "Vlan1", ip: "192.168.1.11",  subnet: "255.255.255.0", gateway: "192.168.1.254" },
+      { device: "SW2",          interface: "Vlan1", ip: "192.168.1.12",  subnet: "255.255.255.0", gateway: "192.168.1.254" },
+    ],
+    tasks: [
+      "ติดตั้ง Ansible + collection: pip install ansible; ansible-galaxy collection install cisco.ios",
+      "สร้าง inventory file hosts.ini แยก group routers และ switches",
+      "สร้าง ansible.cfg กำหนด host_key_checking=False และ timeout=30",
+      "เขียน playbook ntp_config.yml: push NTP server 1.1.1.1 และ 8.8.8.8 ไปทุก device",
+      "เขียน playbook backup.yml: ดึง show running-config แล้วบันทึกไฟล์ <hostname>_<date>.txt",
+      "รัน: ansible-playbook -i hosts.ini ntp_config.yml -v",
+      "Verify: SSH เข้า R1 แล้วรัน show ntp associations",
+      "สร้าง cron job รัน backup.yml ทุกวัน 02:00",
+    ],
+    hints: [
+      "cisco.ios.ios_ntp_global module ใช้ config NTP บน IOS ได้โดยไม่ต้อง ios_command",
+      "ansible_network_os: ios ต้องใส่ใน group_vars/routers.yml",
+      "become: yes ไม่จำเป็นสำหรับ network devices ใช้ ansible_connection: network_cli",
+      "register: output แล้ว debug: var=output.stdout_lines ดู output ระหว่าง test",
+    ],
+    expectedResult: "show ntp associations บน R1/R2/R3 แสดง 1.1.1.1 และ 8.8.8.8; backup files สร้างใน ./backups/; playbook PLAY RECAP: ok=X changed=Y failed=0",
+    troubleshooting: [
+      "Connection timeout: ตรวจ SSH เข้า device ได้มือหรือไม่, ตรวจ ansible_user/ansible_password ใน vars",
+      "Module not found cisco.ios: รัน ansible-galaxy collection install cisco.ios --force",
+      "Permission denied: ตรวจ enable password ใน ansible_become_password",
+    ],
+    solution: `# hosts.ini
+[routers]
+R1 ansible_host=192.168.1.1
+R2 ansible_host=192.168.1.2
+R3 ansible_host=192.168.1.3
+
+[routers:vars]
+ansible_network_os=ios
+ansible_connection=network_cli
+ansible_user=admin
+ansible_password=Cisco123
+
+# ntp_config.yml
+- name: Push NTP config
+  hosts: routers
+  gather_facts: no
+  tasks:
+    - name: Set NTP servers
+      cisco.ios.ios_config:
+        lines:
+          - ntp server 1.1.1.1
+          - ntp server 8.8.8.8`,
+    roadmapLevel: 3,
+    technology:  "Automation",
+    points:      175,
+  },
+
+  /* ── 4. Python Netmiko Bulk Config Lab ──────────────────────── */
+  {
+    id:          "netmiko-bulk-config-lab",
+    title:       "Python Netmiko Bulk VLAN Provisioning Lab",
+    category:    "Network Automation",
+    level:       "Intermediate",
+    duration:    "45 min",
+    status:      "available",
+    description: "เขียน Python script ด้วย Netmiko เพื่อสร้าง VLAN 100-110 บน Access Switch 5 ตัวพร้อมกัน และ verify ผลลัพธ์โดยอัตโนมัติ",
+    scenario:    "Network Engineer ต้องเพิ่ม VLAN ใหม่ 11 VLANs สำหรับ new office floor บน switch 5 ตัว ถ้า manual จะใช้เวลา 30 นาที + error-prone",
+    objective:   "เขียน Python script ใช้ Netmiko สร้าง VLAN 100-110 พร้อม name บน Switch ทุกตัว แล้ว verify ด้วย show vlan brief",
+    devices:     ["Python Workstation", "SW1-SW5 (192.168.0.11-15)"],
+    topology: {
+      devices: [
+        { name: "Workstation", type: "server", ip: "192.168.0.100" },
+        { name: "SW1",         type: "switch", ip: "192.168.0.11" },
+        { name: "SW2",         type: "switch", ip: "192.168.0.12" },
+        { name: "SW3",         type: "switch", ip: "192.168.0.13" },
+        { name: "SW4",         type: "switch", ip: "192.168.0.14" },
+        { name: "SW5",         type: "switch", ip: "192.168.0.15" },
+      ],
+      links: [
+        { from: "Workstation", to: "SW1", label: "SSH mgmt" },
+        { from: "SW1", to: "SW2", label: "Trunk" },
+      ],
+    },
+    ipTable: [
+      { device: "Workstation", interface: "eth0",  ip: "192.168.0.100", subnet: "255.255.255.0", gateway: "192.168.0.1" },
+      { device: "SW1",         interface: "Vlan1", ip: "192.168.0.11",  subnet: "255.255.255.0", gateway: "192.168.0.1" },
+      { device: "SW5",         interface: "Vlan1", ip: "192.168.0.15",  subnet: "255.255.255.0", gateway: "192.168.0.1" },
+    ],
+    tasks: [
+      "pip install netmiko แล้วตรวจ version: python -c 'import netmiko; print(netmiko.__version__)'",
+      "เขียน devices list ของ dict ที่มี host, username, password, device_type",
+      "เขียน function create_vlans(net_connect) push VLAN 100-110 ด้วย send_config_set",
+      "เขียน function verify_vlans(net_connect) รัน show vlan brief แล้ว return output",
+      "ใช้ ThreadPoolExecutor(max_workers=5) เพื่อ connect ทุก switch พร้อมกัน",
+      "บันทึก log ผลลัพธ์แต่ละ switch ลงไฟล์ results.txt",
+      "รัน script และตรวจ results.txt",
+      "SSH เข้า SW1 verify ด้วย show vlan brief ด้วยมือ",
+    ],
+    hints: [
+      "send_config_set รับ list of commands สร้าง ['vlan 100', ' name FLOOR-100', ...] ด้วย list comprehension",
+      "ConnectHandler() ต้อง .disconnect() เสมอ ใช้ with ConnectHandler(...) as net: จะ auto-close",
+      "ThreadPoolExecutor ต้อง catch Exception แต่ละ thread แยกกัน ไม่งั้น error 1 switch จะ crash ทั้ง script",
+      "device_type ของ Cisco IOS switch = 'cisco_ios'",
+    ],
+    expectedResult: "results.txt มี output ทุก switch แสดง VLAN 100-110 active; show vlan brief บน SW1 มี VLAN 100-110; script รันเสร็จใน <30 วินาที",
+    troubleshooting: [
+      "SSH Connection refused: ตรวจว่า device เปิด ip ssh version 2 และ line vty 0 4 transport input ssh",
+      "Authentication failed: ตรวจ username/password ใน dict ลอง SSH มือก่อน",
+      "send_config_set timeout: เพิ่ม conn_timeout=30 ใน ConnectHandler(), device_type บาง IOS ต้องใช้ global_delay_factor=2",
+    ],
+    solution: `from netmiko import ConnectHandler
+from concurrent.futures import ThreadPoolExecutor
+
+DEVICES = [
+    {"host": "192.168.0.11", "username": "admin",
+     "password": "Cisco123", "device_type": "cisco_ios"},
+]
+
+vlans = []
+for i in range(100, 111):
+    vlans += [f"vlan {i}", f" name FLOOR-{i}"]
+
+def provision(device):
+    with ConnectHandler(**device) as net:
+        net.send_config_set(vlans)
+        return (device["host"], net.send_command("show vlan brief"))
+
+with ThreadPoolExecutor(max_workers=5) as ex:
+    results = list(ex.map(provision, DEVICES))`,
+    roadmapLevel: 3,
+    technology:  "Automation",
+    points:      150,
+  },
+
+  /* ── 5. Zero Trust ZTNA Lab ─────────────────────────────────── */
+  {
+    id:          "zero-trust-ztna-lab",
+    title:       "Zero Trust Network Access (ZTNA) Implementation Lab",
+    category:    "Security",
+    level:       "Advanced",
+    duration:    "75 min",
+    status:      "available",
+    description: "ออกแบบและ implement Zero Trust architecture micro-segmentation, identity-based access, และ continuous verification บน Cisco ISE",
+    scenario:    "บริษัทพบว่า ransomware แพร่กระจายใน flat network ได้ง่าย ต้องการย้ายไปใช้ Zero Trust โดยแบ่ง segment ตาม role และ require MFA ทุก access",
+    objective:   "Config SGT (Security Group Tags) บน ISE + Catalyst switch สำหรับ micro-segmentation, implement 802.1X + MFA policy",
+    devices:     ["Cisco ISE 3.2", "Catalyst 9300", "Catalyst 9200", "AD Server", "Employee PC", "Contractor Laptop"],
+    topology: {
+      devices: [
+        { name: "ISE",              type: "server", ip: "10.1.1.10" },
+        { name: "AD",               type: "server", ip: "10.1.1.11" },
+        { name: "Core-SW (C9300)",  type: "switch", ip: "10.1.1.1" },
+        { name: "Access-SW (C9200)",type: "switch", ip: "10.1.1.2" },
+        { name: "Employee-PC",      type: "server", ip: "10.10.10.X" },
+        { name: "Contractor",       type: "server", ip: "10.20.20.X" },
+      ],
+      links: [
+        { from: "ISE",       to: "Core-SW",    label: "RADIUS/TACACS+" },
+        { from: "Core-SW",   to: "Access-SW",  label: "Trunk" },
+        { from: "Access-SW", to: "Employee-PC",label: "802.1X" },
+      ],
+    },
+    ipTable: [
+      { device: "ISE",        interface: "eth0",   ip: "10.1.1.10",  subnet: "255.255.255.0", gateway: "10.1.1.254" },
+      { device: "Core-SW",    interface: "Vlan10", ip: "10.1.1.1",   subnet: "255.255.255.0", gateway: "-" },
+      { device: "Employee",   interface: "VLAN10", ip: "10.10.10.X", subnet: "255.255.255.0", gateway: "10.10.10.1", notes: "Dynamic VLAN via ISE" },
+      { device: "Contractor", interface: "VLAN20", ip: "10.20.20.X", subnet: "255.255.255.0", gateway: "10.20.20.1", notes: "Limited access VLAN" },
+    ],
+    tasks: [
+      "สร้าง SGT บน ISE: Employees (SGT 10), Contractors (SGT 20), Servers (SGT 30), IOT (SGT 40)",
+      "สร้าง SGACL policy: Employees to Servers allow TCP 443,22; Contractors to Servers deny all",
+      "Config RADIUS บน Core-SW: radius server ISE address 10.1.1.10 auth-port 1812",
+      "เปิด TrustSec: cts credentials id Core-SW password Trust@123",
+      "Config 802.1X บน Access-SW port ที่เชื่อม PC: dot1x pae authenticator",
+      "สร้าง ISE Policy Set: condition AD:Group = Employees to permit VLAN 10 + SGT 10",
+      "สร้าง Policy: condition AD:Group = Contractors to permit VLAN 20 + SGT 20",
+      "ทดสอบ: plug Employee PC เข้า port, verify ได้ VLAN 10 ด้วย show authentication sessions",
+    ],
+    hints: [
+      "SGT propagation ต้องการ MACsec หรือ SGT Exchange Protocol (SXP) ถ้า switch รุ่นเก่าไม่รองรับ inline tagging",
+      "ใช้ ISE Live Logs ใน Operations > RADIUS > Live Logs เพื่อ debug 802.1X authentication real-time",
+      "SGACL ต้องกำหนดทั้ง permit และ deny ชัดเจน ไม่มี implicit deny ถ้าไม่ได้ตั้ง",
+      "download-acl option ใน ISE authorization profile ใช้ push dACL ไปยัง switch แทน SGT",
+    ],
+    expectedResult: "Employee PC ได้ VLAN 10 อัตโนมัติหลัง 802.1X สำเร็จ; Contractor ได้ VLAN 20; show cts role-based sgt-map แสดง SGT mapping; ping จาก Contractor ถึง Server ถูก deny",
+    troubleshooting: [
+      "802.1X auth fail: debug dot1x all บน switch, ตรวจ ISE Live Log ดู reason มักเกิดจาก certificate ไม่ match",
+      "SGT ไม่ propagate: show cts interface Gi1/0/1 ดู propagation mode ต้องเป็น Trusted และ TrustSec enabled",
+      "RADIUS timeout: ping ISE จาก switch ได้ไหม ตรวจ ISE service running",
+    ],
+    solution: `! Catalyst 9300 Core config
+aaa new-model
+radius server ISE
+ address ipv4 10.1.1.10 auth-port 1812 acct-port 1813
+ key Cisco123
+!
+cts credentials id Core-SW password Trust@123
+cts role-based enforcement
+!
+! Access switch port
+interface GigabitEthernet1/0/5
+ switchport mode access
+ dot1x pae authenticator
+ authentication port-control auto
+ mab`,
+    roadmapLevel: 4,
+    technology:  "Security",
+    points:      225,
+  },
+
+  /* ── 6. SD-WAN Viptela Lab ──────────────────────────────────── */
+  {
+    id:          "sdwan-viptela-lab",
+    title:       "Cisco SD-WAN (Viptela) Branch Deployment Lab",
+    category:    "Advanced Networking",
+    level:       "Advanced",
+    duration:    "90 min",
+    status:      "available",
+    description: "Deploy Cisco SD-WAN vEdge router ที่ branch office onboard ด้วย Zero Touch Provisioning (ZTP) และ config Application-Aware Routing policy",
+    scenario:    "บริษัทขยาย branch ใหม่ 3 แห่ง ต้องการ onboard vEdge router โดยอัตโนมัติผ่าน ZTP และตั้ง policy ส่ง video traffic ผ่าน MPLS และ data ทั่วไปผ่าน Internet",
+    objective:   "Onboard vEdge บน vManage ผ่าน ZTP, สร้าง App-Aware Routing policy (SLA-based), verify TLOCs และ OMP routes",
+    devices:     ["vManage", "vBond", "vSmart", "vEdge1 (HQ)", "vEdge2 (Branch)"],
+    topology: {
+      devices: [
+        { name: "vManage", type: "server", ip: "192.168.100.10" },
+        { name: "vBond",   type: "server", ip: "192.168.100.11" },
+        { name: "vSmart",  type: "server", ip: "192.168.100.12" },
+        { name: "vEdge1",  type: "router", ip: "10.0.0.1" },
+        { name: "vEdge2",  type: "router", ip: "10.0.0.2" },
+      ],
+      links: [
+        { from: "vManage", to: "vEdge1", label: "NETCONF/HTTPS" },
+        { from: "vBond",   to: "vEdge2", label: "DTLS (auth)" },
+        { from: "vEdge1",  to: "vEdge2", label: "IPsec BFD" },
+      ],
+    },
+    ipTable: [
+      { device: "vManage", interface: "eth0",  ip: "192.168.100.10", subnet: "255.255.255.0", gateway: "192.168.100.1" },
+      { device: "vEdge1",  interface: "ge0/0", ip: "10.0.0.1",       subnet: "255.255.255.0", gateway: "10.0.0.254",   notes: "MPLS WAN" },
+      { device: "vEdge1",  interface: "ge0/1", ip: "203.0.113.1",    subnet: "255.255.255.0", gateway: "203.0.113.254",notes: "Internet WAN" },
+      { device: "vEdge2",  interface: "ge0/0", ip: "10.0.0.2",       subnet: "255.255.255.0", gateway: "10.0.0.254",   notes: "MPLS WAN" },
+    ],
+    tasks: [
+      "Login vManage UI: add vEdge2 serial number และ chassis ID ใน Device List",
+      "สร้าง Device Template สำหรับ Branch: อ้างอิง Feature Templates (System, VPN0, VPN512, BFD, OMP)",
+      "Attach template ไปยัง vEdge2 ใส่ site-id=200, system-ip=10.0.200.1",
+      "Boot vEdge2 ด้วย ZTP router จะ contact vBond อัตโนมัติ ใช้ wan-ip จาก DHCP",
+      "Verify บน vManage: vEdge2 ต้องขึ้น status = reachable (green)",
+      "สร้าง Application-Aware Routing Policy: Video (DSCP 46) MPLS preferred (SLA jitter<10ms); Data Internet",
+      "Attach policy ไปยัง vSmart push ไปทุก vEdge",
+      "ทดสอบ: show sdwan policy from-vsmart บน vEdge1",
+    ],
+    hints: [
+      "TLOC = (system-ip, color, encap) vEdge ต้องมี TLOC ขึ้นบน vSmart ก่อน OMP route จะ propagate",
+      "App-Aware Routing อ่านค่า BFD probe result ตรวจ show sdwan bfd sessions ว่า state = up",
+      "vManage template attachment ต้องกด Attach Devices แล้วรอ config push 2-5 นาที",
+      "show control connections บน vEdge ดู DTLS state กับ vBond",
+    ],
+    expectedResult: "vEdge2 ขึ้น status reachable บน vManage; show sdwan omp routes แสดง routes จาก vEdge1; video traffic ไปทาง MPLS; show sdwan policy from-vsmart แสดง policy active",
+    troubleshooting: [
+      "vEdge ไม่ขึ้น vManage: ตรวจ show control connections บน vEdge ดู DTLS state กับ vBond",
+      "OMP peer ไม่ up: ตรวจ show sdwan omp peers ต้องมี vSmart เป็น peer state=established",
+      "Policy ไม่ apply: ตรวจ show sdwan policy from-vsmart ถ้า empty แปลว่า policy ยังไม่ถูก push จาก vSmart",
+    ],
+    solution: `! Verify commands on vEdge
+show control connections
+show sdwan omp peers
+show sdwan omp routes
+show sdwan bfd sessions
+show sdwan policy from-vsmart
+show sdwan app-route stats`,
+    roadmapLevel: 4,
+    technology:  "SD-WAN",
+    points:      225,
+  },
+
+  /* ── 7. eBPF/XDP Monitoring Lab ─────────────────────────────── */
+  {
+    id:          "ebpf-xdp-monitoring-lab",
+    title:       "eBPF/XDP Network Traffic Monitoring Lab",
+    category:    "Cloud Native",
+    level:       "Advanced",
+    duration:    "60 min",
+    status:      "available",
+    description: "เขียน eBPF program สำหรับ count และ drop specific traffic ที่ kernel level ด้วย XDP โดยไม่กระทบ performance",
+    scenario:    "Platform team ต้องการ monitor จำนวน HTTP request per source IP แบบ real-time และสามารถ drop DDoS traffic ที่ kernel โดยไม่ผ่าน user-space",
+    objective:   "เขียน eBPF/XDP program ด้วย Python BCC สำหรับ count packets per source IP แสดง top-10 talkers และ block IP ที่กำหนด",
+    devices:     ["Linux Server (Ubuntu 22.04)", "Traffic Generator"],
+    topology: {
+      devices: [
+        { name: "Monitor Server", type: "server", ip: "10.0.0.1" },
+        { name: "Traffic Gen",    type: "server", ip: "10.0.0.2" },
+      ],
+      links: [{ from: "Monitor Server", to: "Traffic Gen", label: "eth0 1G" }],
+    },
+    ipTable: [
+      { device: "Monitor Server", interface: "eth0", ip: "10.0.0.1", subnet: "255.255.255.0", gateway: "10.0.0.254" },
+      { device: "Traffic Gen",    interface: "eth0", ip: "10.0.0.2", subnet: "255.255.255.0", gateway: "10.0.0.254" },
+    ],
+    tasks: [
+      "ติดตั้ง BCC: apt install bpfcc-tools linux-headers-$(uname -r)",
+      "ตรวจสอบ kernel support: uname -r ต้อง >= 4.18; ls /sys/fs/bpf/ ต้องมี directory",
+      "เขียน eBPF C program นับ packet per src_ip ด้วย BPF_HASH",
+      "ใช้ BCC b.attach_xdp('eth0', fn) attach โปรแกรมไปที่ NIC",
+      "เพิ่ม logic: ถ้า src IP อยู่ใน blocklist return XDP_DROP; ถ้าไม่อยู่ return XDP_PASS และ increment counter",
+      "แสดงผล top-10 source IP ทุก 2 วินาที sorted by packet count",
+      "ทดสอบ: hping3 -S -p 80 --flood 10.0.0.1 จาก Traffic Gen",
+      "Block IP: เพิ่มลง blocklist แล้ว verify ด้วย tcpdump ว่า traffic หาย",
+    ],
+    hints: [
+      "XDP_DROP ใน eBPF จะ drop packet ก่อน kernel network stack รับ เร็วกว่า iptables มาก",
+      "BPF_HASH(name, key_type, value_type, max_entries) key = __u32 src_ip, value = __u64 count",
+      "bpf_ntohl() ต้องใช้แปลง IP จาก network byte order เพื่อ compare กับ blocklist",
+      "attach_xdp ต้อง sudo หรือ CAP_NET_ADMIN รัน script ด้วย sudo",
+    ],
+    expectedResult: "Script แสดง real-time top-10 source IPs; hping3 flood IP ขึ้นอยู่ใน top; หลัง block tcpdump ไม่แสดง packet จาก IP นั้น; CPU usage ต่ำ (<5%) แม้ flood",
+    troubleshooting: [
+      "ImportError bcc: ต้องใช้ apt install bpfcc-tools ไม่ใช่ pip install bcc",
+      "attach_xdp fail: ตรวจ driver support XDP ถ้าไม่รองรับ ใช้ mode=BPF.XDP_FLAGS_SKB_MODE (generic mode)",
+      "Permission denied: รันด้วย sudo ตรวจ /proc/sys/kernel/unprivileged_bpf_disabled = 0",
+    ],
+    solution: `# Install: apt install bpfcc-tools linux-headers-$(uname -r)\n# Run: sudo python3 ebpf_monitor.py\n# See: https://github.com/iovisor/bcc/blob/master/examples/networking/xdp/xdp_drop_count.py\n# BPF_HASH(packet_count, u32, u64) -- key=src_ip, val=pkt_count\n# XDP_DROP to block, XDP_PASS to count\n# b.attach_xdp("eth0", fn, 0) -- attach to NIC`,
+
+    roadmapLevel: 5,
+    technology:  "Cloud Native",
+    points:      250,
+  },
+
+  /* ── 8. Wi-Fi 7 Enterprise Deployment Lab ───────────────────── */
+  {
+    id:          "wifi7-enterprise-lab",
+    title:       "Wi-Fi 7 (802.11be) Enterprise Deployment Lab",
+    category:    "Wireless",
+    level:       "Advanced",
+    duration:    "60 min",
+    status:      "available",
+    description: "วางแผนและ config Wi-Fi 7 enterprise network สำหรับ office 500 users รองรับ 4K video conferencing และ AR/VR",
+    scenario:    "สำนักงาน 3 ชั้น 500 users ต้องการ upgrade จาก Wi-Fi 5 เป็น Wi-Fi 7 โดยต้องรองรับ MLO, WPA3-Enterprise และ seamless roaming",
+    objective:   "Design RF plan, config Cisco WLC 9800 สำหรับ Wi-Fi 7 AP, เปิด MLO, config WPA3-Enterprise + OWE transition, ทดสอบ throughput",
+    devices:     ["Cisco Catalyst Center", "Cisco WLC 9800", "Cisco AP 9178 (Wi-Fi 7)", "Wi-Fi 7 Client"],
+    topology: {
+      devices: [
+        { name: "Catalyst Center", type: "server",  ip: "10.1.0.10" },
+        { name: "WLC 9800",        type: "switch",  ip: "10.1.0.1" },
+        { name: "AP-Floor1",       type: "wireless",ip: "10.1.1.11" },
+        { name: "AP-Floor2",       type: "wireless",ip: "10.1.1.12" },
+        { name: "AP-Floor3",       type: "wireless",ip: "10.1.1.13" },
+      ],
+      links: [
+        { from: "WLC 9800", to: "AP-Floor1", label: "CAPWAP / PoE++" },
+        { from: "WLC 9800", to: "AP-Floor2", label: "CAPWAP / PoE++" },
+      ],
+    },
+    ipTable: [
+      { device: "WLC 9800",  interface: "Gi1",    ip: "10.1.0.1",   subnet: "255.255.255.0", gateway: "10.1.0.254" },
+      { device: "AP-Floor1", interface: "eth0",   ip: "10.1.1.11",  subnet: "255.255.255.0", gateway: "10.1.1.254" },
+      { device: "Corp SSID", interface: "VLAN10", ip: "10.10.0.X",  subnet: "255.255.0.0",   gateway: "10.10.0.1", notes: "Employee WLAN" },
+      { device: "Guest SSID",interface: "VLAN20", ip: "172.16.0.X", subnet: "255.255.0.0",   gateway: "172.16.0.1",notes: "Guest WLAN" },
+    ],
+    tasks: [
+      "RF Planning: กำหนด AP placement ให้ได้ RSSI >= -67dBm ทุก coverage area",
+      "Config AP radio: เปิด 6GHz band (Wi-Fi 7), channel width 320MHz, TxPower 17dBm",
+      "สร้าง WLAN Corp-WiFi7: Security WPA3-Enterprise, AKM suite SAE+FT-SAE, PMF required",
+      "เปิด MLO บน WLAN: multi-link mode active, link steering 5GHz + 6GHz concurrent",
+      "Config 802.1X: RADIUS server ISE 10.1.1.10, authentication EAP-TLS",
+      "Config BSS Coloring: เปิด spatial reuse เพื่อลด co-channel interference",
+      "สร้าง Guest WLAN: OWE Transition Mode (open + OWE), client isolation",
+      "ทดสอบ: iperf3 -c 10.1.0.100 -t 30 -P 4 จาก Wi-Fi 7 laptop target > 2 Gbps",
+    ],
+    hints: [
+      "MLO ต้องการ AP และ Client ที่รองรับ 802.11be ตรวจ client capabilities ด้วย show wireless client detail",
+      "6GHz ใช้เฉพาะ WPA3/OWE เท่านั้น legacy WPA2 client จะเห็นแค่ 2.4/5GHz",
+      "BSS Coloring color value 1-63 AP ข้างๆ ต้องใช้คนละ color เพื่อให้ spatial reuse ทำงาน",
+      "FT (Fast Transition) roaming สำคัญสำหรับ VoIP ตรวจ roaming time < 50ms",
+    ],
+    expectedResult: "iperf3 ได้ >2 Gbps; show wireless client detail แสดง multi-link established; roaming between floors < 50ms; Guest client isolation active",
+    troubleshooting: [
+      "Client ไม่เชื่อม 6GHz: ตรวจ driver update ตรวจ country code ว่า 6GHz legal (Thailand ต้องตรวจ NBTC regulation)",
+      "MLO ไม่ active: show wireless client detail ดู MLO status client อาจเป็น Wi-Fi 6 ที่ไม่รองรับ",
+      "iperf3 throughput ต่ำ: ตรวจ channel utilization ใน show ap auto-rf ดู interference %",
+    ],
+    solution: `! Cisco WLC 9800 CLI
+wlan Corp-WiFi7 10 Corp-WiFi7
+ security wpa wpa3
+ security wpa akm sae
+ security wpa akm ft-sae
+ security pmf mandatory
+ no shutdown
+!
+ap dot11 6ghz shutdown no
+ap dot11 6ghz channel width 320
+ap dot11 6ghz txpower 17
+!
+wlan Corp-WiFi7 radio dot11 6ghz
+wlan Corp-WiFi7 mlo`,
+    roadmapLevel: 4,
+    technology:  "Wireless",
+    points:      200,
+  },
+
+  /* ── 9. Datacenter Cabling Lab ──────────────────────────────── */
+  {
+    id:          "datacenter-cabling-lab",
+    title:       "Data Center Cabling Standards and Patch Panel Lab",
+    category:    "Hardware",
+    level:       "Intermediate",
+    duration:    "45 min",
+    status:      "available",
+    description: "ฝึก terminate Cat6A จาก Patch Panel ไปยัง Switch, label ตาม ANSI/TIA-568-C.2 standard, test ด้วย cable tester",
+    scenario:    "Data Center ใหม่ต้องการ cable horizontal distribution สำหรับ 24 ports ทุก cable ต้อง pass Permanent Link test และ label ถูกต้องตาม standard",
+    objective:   "Terminate 24 Cat6A patch panel ports, label ตาม naming convention, ทดสอบด้วย Fluke DSX-8000 verify ผ่าน TIA Category 6A performance",
+    devices:     ["24-port Cat6A Patch Panel", "Cisco Catalyst 9300", "Cat6A Cable Spool", "Fluke DSX-8000", "Punch-down Tool"],
+    topology: {
+      devices: [
+        { name: "Patch Panel",    type: "switch", ip: "-" },
+        { name: "Catalyst 9300", type: "switch", ip: "10.0.0.1" },
+        { name: "Workstations",  type: "server", ip: "10.0.1.X" },
+      ],
+      links: [
+        { from: "Workstation", to: "Patch Panel",   label: "Horizontal Cat6A (<=90m)" },
+        { from: "Patch Panel", to: "Catalyst 9300", label: "Patch Cord Cat6A (<=5m)" },
+      ],
+    },
+    ipTable: [
+      { device: "Catalyst 9300",  interface: "Vlan1", ip: "10.0.0.1",  subnet: "255.255.255.0", gateway: "-" },
+      { device: "Workstation-01", interface: "NIC",   ip: "10.0.1.1",  subnet: "255.255.255.0", gateway: "10.0.0.1" },
+      { device: "Workstation-24", interface: "NIC",   ip: "10.0.1.24", subnet: "255.255.255.0", gateway: "10.0.0.1" },
+    ],
+    tasks: [
+      "วัดและตัด Cat6A cable ตาม horizontal run แต่ละ run <= 90m",
+      "Strip jacket 25mm, แยก pair และ untwist <= 13mm สำหรับ termination",
+      "Punch-down แต่ละ pair ตาม T568B: W/O O W/G BL W/BL G W/BR BR",
+      "Label patch panel port: format [Building]-[Floor]-[Room]-[Port] เช่น B1-F2-R01-P01",
+      "ต่อ patch cord Cat6A จาก patch panel ไปยัง switch port ที่ตรงกัน",
+      "รัน Permanent Link test ด้วย Fluke DSX-8000: test ต้องผ่าน TIA 568-C.2 Cat6A",
+      "บันทึก test result ทุก port ลง report และ save ไฟล์ใน DSX-8000",
+      "Verify connectivity: ping จาก Workstation-01 ถึง Workstation-24",
+    ],
+    hints: [
+      "T568B: Thailand data center มักใช้ T568B สำคัญกว่าคือ consistent ทั้งสอง end",
+      "Untwist มากเกินไปทำให้ NEXT (Near-End Crosstalk) fail maintain twist ให้ใกล้ termination",
+      "Cat6A alien crosstalk ต้องการ cable bundle <= 24 cables ต่อ bundle และ maintain spacing",
+      "Fluke DSX-8000 Autotest ทดสอบ insertion loss, NEXT, PS-NEXT, ELFEXT, Return Loss พร้อมกัน",
+    ],
+    expectedResult: "ทุก 24 ports ผ่าน TIA 568-C.2 Category 6A Permanent Link test (PASS); label ถูกต้องทุก port; ping ระหว่าง workstations สำเร็จ",
+    troubleshooting: [
+      "Permanent Link FAIL Insertion Loss: ตรวจ cable length ต้องไม่เกิน 90m รวม patch cord ตรวจ bend radius",
+      "NEXT FAIL: ตรวจ untwist length <= 13mm ตรวจ punch-down pair ถูก position",
+      "No link บน switch: ตรวจ LED switch port ตรวจ cable ต่อถูก port ลอง swap patch cord",
+    ],
+    solution: `T568B Wiring (left to right):
+Pin 1: White/Orange
+Pin 2: Orange
+Pin 3: White/Green
+Pin 4: Blue
+Pin 5: White/Blue
+Pin 6: Green
+Pin 7: White/Brown
+Pin 8: Brown
+
+Naming: [BLDG]-[FLOOR]-[ROOM]-P[PORT#]
+Example: DC1-F1-MDF-P01
+
+Fluke DSX-8000: Main Menu > Autotest > Cat 6A Permanent Link`,
+    roadmapLevel: 2,
+    technology:  "Hardware",
+    points:      125,
+  },
+
+  /* ── 10. Switch MLAG / VSS Stack Lab ───────────────────────── */
+  {
+    id:          "switch-mlag-stack-lab",
+    title:       "Switch MLAG High-Availability Stacking Lab",
+    category:    "Hardware",
+    level:       "Intermediate",
+    duration:    "60 min",
+    status:      "available",
+    description: "Config MLAG (Multi-Chassis Link Aggregation) บน Arista EOS Switch เพื่อให้ Server เชื่อม 2 switch ด้วย LACP bond พร้อมกัน Active-Active ไม่มี STP blocking",
+    scenario:    "Server สำคัญในระบบต้องการ dual-homed connection แบบ Active-Active ไปยัง switch 2 ตัว ให้ switch ตัวใดตัวหนึ่ง fail ได้โดยไม่ interrupt traffic",
+    objective:   "Config MLAG peer-link, PortChannel และ LACP บน Arista SW1+SW2, config server LACP bond0 เชื่อมทั้ง 2 switch verify failover ด้วยการ shutdown SW1",
+    devices:     ["Arista EOS SW1 (7050CX3)", "Arista EOS SW2 (7050CX3)", "Linux Server (dual NIC)"],
+    topology: {
+      devices: [
+        { name: "SW1",    type: "switch", ip: "10.0.0.1" },
+        { name: "SW2",    type: "switch", ip: "10.0.0.2" },
+        { name: "Server", type: "server", ip: "10.1.1.100" },
+      ],
+      links: [
+        { from: "SW1",    to: "SW2",    label: "Peer-Link: Et47+Et48 (2x100G)" },
+        { from: "SW1",    to: "Server", label: "Et1 -> eth0 (10G)" },
+        { from: "SW2",    to: "Server", label: "Et1 -> eth1 (10G)" },
+      ],
+    },
+    ipTable: [
+      { device: "SW1",    interface: "Vlan1",   ip: "10.0.0.1",   subnet: "255.255.255.0", gateway: "-" },
+      { device: "SW2",    interface: "Vlan1",   ip: "10.0.0.2",   subnet: "255.255.255.0", gateway: "-" },
+      { device: "SW1",    interface: "Vlan4094",ip: "10.255.0.1", subnet: "255.255.255.0", gateway: "-", notes: "MLAG peer VLAN" },
+      { device: "SW2",    interface: "Vlan4094",ip: "10.255.0.2", subnet: "255.255.255.0", gateway: "-", notes: "MLAG peer VLAN" },
+      { device: "Server", interface: "bond0",   ip: "10.1.1.100", subnet: "255.255.255.0", gateway: "10.1.1.1", notes: "LACP bond (eth0+eth1)" },
+    ],
+    tasks: [
+      "Config Peer-Link บน SW1+SW2: Port-Channel 1 ใช้ Et47+Et48 LACP mode active",
+      "Config MLAG domain: mlag configuration -> domain-id MLAG-PAIR, peer-link Port-Channel1, local-interface Vlan4094",
+      "กำหนด MLAG ID: Et1 เป็น MLAG 10 บน SW1 และ SW2 (port-channel 10)",
+      "Config Linux Server: modprobe bonding, สร้าง bond0 ด้วย mode=4 (802.3ad LACP)",
+      "เพิ่ม eth0 + eth1 เข้า bond0: ip link set eth0 master bond0; ip link set eth1 master bond0",
+      "ตั้ง IP บน bond0: ip addr add 10.1.1.100/24 dev bond0",
+      "Verify: show mlag บน SW1 ต้องแสดง state=active, peer=connected",
+      "Failover test: shutdown SW1 ping จาก server ต้อง drop <= 1 packet แล้วกลับมา",
+    ],
+    hints: [
+      "MLAG peer VLAN 4094 ต้อง dedicated ไม่ควรมี user traffic บน VLAN นี้",
+      "MLAG ID ต้องเหมือนกันทั้ง 2 switch สำหรับ server-facing port ถ้าต่างกันจะเป็น independent LACP",
+      "Linux bonding mode=4 (802.3ad) ต้องการ lacp_rate=fast เพื่อให้ failover เร็ว ค่า default slow = 30 วินาที",
+      "show lacp neighbor บน switch ดูว่า server NIC ส่ง LACP PDU มาถูกต้องหรือไม่",
+    ],
+    expectedResult: "show mlag แสดง state=active peer=connected; show port-channel 10 detail แสดง 2 active member; ping failover <100ms เมื่อ shutdown SW1; cat /proc/net/bonding/bond0 แสดง Active Slave สลับไป eth1",
+    troubleshooting: [
+      "MLAG peer ไม่ขึ้น connected: ตรวจ peer-link PortChannel1 ว่า bundle ขึ้น ตรวจ Vlan4094 trunk ผ่าน peer-link",
+      "Server bond ไม่ขึ้น LACP: ตรวจ show lacp neighbor บน switch ดูว่า PDU มาจาก server",
+      "Failover ช้า >1 วินาที: ตรวจ lacp_rate บน server ต้องเป็น fast ตรวจ mlag timers บน switch",
+    ],
+    solution: `! SW1 config
+vlan 4094
+!
+interface Port-Channel1
+   description MLAG-Peer-Link
+   switchport mode trunk
+!
+interface Ethernet47-48
+   channel-group 1 mode active
+!
+mlag configuration
+   domain-id MLAG-PAIR
+   local-interface Vlan4094
+   peer-address 10.255.0.2
+   peer-link Port-Channel1
+!
+interface Port-Channel10
+   mlag 10
+!
+interface Ethernet1
+   channel-group 10 mode active
+!
+! Linux Server
+modprobe bonding
+ip link add bond0 type bond mode 4
+ip link set eth0 master bond0
+ip link set eth1 master bond0
+ip addr add 10.1.1.100/24 dev bond0`,
+    roadmapLevel: 3,
+    technology:  "Hardware",
+    points:      175,
+  },
+
 
 ];
 
