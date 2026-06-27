@@ -4,6 +4,7 @@ import Link from "next/link";
 import { allFoundationLessons } from "@/data/foundationCourses";
 import type { LessonSection } from "@/types/course";
 import LessonCompleteButton from "@/components/lessons/LessonCompleteButton";
+import MermaidDiagram from "@/components/lessons/MermaidDiagram";
 
 interface Props { params: { slug: string } }
 
@@ -94,6 +95,10 @@ export default function FoundationLessonPage({ params }: Props) {
   const lesson = allFoundationLessons.find((l) => l.slug === params.slug);
   if (!lesson) notFound();
 
+  const idx  = allFoundationLessons.findIndex((l) => l.slug === params.slug);
+  const prev = allFoundationLessons[idx - 1];
+  const next = allFoundationLessons[idx + 1];
+
   return (
     <div className="min-h-screen bg-[#050816] text-gray-200">
       <div className="max-w-4xl mx-auto px-6 py-10">
@@ -164,13 +169,7 @@ export default function FoundationLessonPage({ params }: Props) {
         {/* Diagram */}
         {lesson.mermaidDiagram && (
           <Section title="📊 Diagram">
-            <div className="rounded-xl overflow-hidden border border-violet-500/20">
-              <div className="px-4 py-1.5 bg-violet-500/[0.05] border-b border-violet-500/10 flex items-center gap-2">
-                <span className="text-xs text-violet-400 font-mono">mermaid</span>
-                <span className="text-xs text-gray-600">— วางที่ mermaid.live เพื่อดูแผนภาพ</span>
-              </div>
-              <pre className="p-4 text-xs text-violet-300 font-mono leading-relaxed overflow-x-auto bg-violet-500/[0.02]">{lesson.mermaidDiagram}</pre>
-            </div>
+            <MermaidDiagram chart={lesson.mermaidDiagram} />
           </Section>
         )}
 
@@ -289,19 +288,39 @@ export default function FoundationLessonPage({ params }: Props) {
           )}
         </div>
 
-        {/* Navigation */}
-        <div className="mt-4 flex justify-between">
-          <Link href="/foundation" className="px-4 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 text-sm transition-colors">
-            ← Back to Foundation
-          </Link>
-          <Link href="/advanced" className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white text-sm font-medium transition-colors">
-            Advanced Tracks →
-          </Link>
-        </div>
-
         {/* Mark Complete */}
         <div className="mt-10 pt-6 border-t border-gray-700/40 flex justify-center">
           <LessonCompleteButton lessonId={lesson.slug} track="foundation" xp={lesson.xp} />
+        </div>
+
+        {/* Prev / Next */}
+        <div className="mt-8 grid grid-cols-2 gap-4">
+          {prev ? (
+            <Link href={`/foundation/lessons/${prev.slug}`}
+              className="flex flex-col gap-1 rounded-xl border border-white/[0.07] hover:border-cyan-500/20 bg-white/[0.02] hover:bg-white/[0.04] p-4 transition-all">
+              <span className="text-[10px] text-gray-600 uppercase tracking-wider">← Previous</span>
+              <span className="text-sm text-white font-medium line-clamp-1">{prev.title}</span>
+            </Link>
+          ) : (
+            <Link href="/foundation"
+              className="flex flex-col gap-1 rounded-xl border border-white/[0.07] hover:border-cyan-500/20 bg-white/[0.02] hover:bg-white/[0.04] p-4 transition-all">
+              <span className="text-[10px] text-gray-600 uppercase tracking-wider">← Foundation</span>
+              <span className="text-sm text-gray-400 font-medium">Back to track</span>
+            </Link>
+          )}
+          {next ? (
+            <Link href={`/foundation/lessons/${next.slug}`}
+              className="lex flex-col gap-1 rounded-xl border border-white/[0.07] hover:border-cyan-500/20 bg-white/[0.02] hover:bg-white/[0.04] p-4 transition-all text-right">
+              <span className="text-[10px] text-gray-600 uppercase tracking-wider">Next →</span>
+              <span className="text-sm text-white font-medium line-clamp-1">{next.title}</span>
+            </Link>
+          ) : (
+            <Link href="/advanced"
+              className="flex flex-col gap-1 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4 transition-all text-right">
+              <span className="text-[10px] text-cyan-600 uppercase tracking-wider">Foundation Complete!</span>
+              <span className="text-sm text-cyan-300 font-medium">Advanced Tracks →</span>
+            </Link>
+          )}
         </div>
 
       </div>

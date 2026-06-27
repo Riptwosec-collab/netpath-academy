@@ -38,6 +38,68 @@ const networkFundamentals: Lesson = {
   prerequisites: [],
   concepts: ["LAN", "WAN", "MAN", "Topology", "Node", "Host", "Protocol", "Bandwidth", "Latency", "Unicast", "Multicast", "Broadcast"],
   architecture: "Network เชื่อมต่อ Device หลายตัวเข้าด้วยกันผ่าน Switch, Router และ Cable เพื่อให้แลกเปลี่ยนข้อมูลกันได้",
+  sections: [
+    {
+      title: "เครือข่ายคอมพิวเตอร์คืออะไร?",
+      body: "เครือข่ายคอมพิวเตอร์ (Computer Network) คือการเชื่อมต่ออุปกรณ์ตั้งแต่ 2 ชิ้นขึ้นไปเพื่อแชร์ข้อมูลและทรัพยากรร่วมกัน\n\nก่อนมีเครือข่าย: ต้องใช้ Floppy Disk หรือ USB drive พกข้อมูล\nหลังมีเครือข่าย: ส่งไฟล์, แชร์ Printer, ดู Netflix, Video Call ได้ทุกอุปกรณ์",
+      table: {
+        header: ["ประเภทเครือข่าย", "ย่อมาจาก", "ระยะ", "ตัวอย่าง"],
+        rows: [
+          ["LAN", "Local Area Network", "อาคาร / ออฟฟิศ", "เครือข่ายบริษัท, บ้าน"],
+          ["WAN", "Wide Area Network", "ข้ามเมือง / ประเทศ", "Internet, MPLS"],
+          ["MAN", "Metropolitan Area Network", "ระดับเมือง", "เครือข่ายมหาวิทยาลัย"],
+          ["PAN", "Personal Area Network", "< 10 เมตร", "Bluetooth, USB"],
+        ],
+      },
+      tip: "LAN = ภายในอาคาร, WAN = ระหว่างเมือง/ประเทศ — Internet คือ WAN ที่ใหญ่ที่สุดในโลก",
+    },
+    {
+      title: "อุปกรณ์เครือข่ายและหน้าที่",
+      body: "แต่ละอุปกรณ์ทำงานต่าง Layer ใน OSI Model:",
+      table: {
+        header: ["อุปกรณ์", "OSI Layer", "หน้าที่"],
+        rows: [
+          ["Hub", "Layer 1", "ส่ง broadcast ทุก port — เลิกใช้แล้ว"],
+          ["Switch", "Layer 2", "ส่ง frame ตาม MAC Address — เชื่อม LAN"],
+          ["Router", "Layer 3", "เลือก path ตาม IP Address — เชื่อมระหว่าง network"],
+          ["Firewall", "Layer 3-7", "กรอง traffic ตาม policy"],
+          ["Access Point", "Layer 2", "แปลง wired เป็น wireless"],
+          ["Load Balancer", "Layer 4-7", "กระจาย traffic ไปหลาย server"],
+        ],
+      },
+    },
+    {
+      title: "Protocol และ Bandwidth vs Latency",
+      body: "Protocol คือ 'ภาษากลาง' ที่อุปกรณ์ใช้คุยกัน — ถ้า Protocol ไม่ตรงกัน ก็คุยกันไม่รู้เรื่อง\n\nBandwidth = ความจุของช่องทาง (เหมือนขนาดท่อน้ำ) — วัดด่วย Mbps, Gbps\nLatency = ความล่าช้า (เหมือนระยะทางที่น้ำต้องเดินทาง) — วัดด้วย ms\n\nอินเทอร์เน็ตบ้านไทยทั่วไป 100Mbps download แต่ latency ไปยุโรปอาจ 200ms",
+      code: `# ทดสอบ Bandwidth และ Latency
+ping 8.8.8.8 -c 10           # วัด latency (ms) ไป Google DNS
+ping 8.8.8.8 -c 100 | tail   # average/min/max
+
+# ทดสอบ bandwidth ด้วย iperf3
+iperf3 -s                    # server mode (รอรับ)
+iperf3 -c SERVER_IP -t 30    # client: test 30 วินาที
+
+# ดู bandwidth usage real-time
+nload eth0
+iftop -i eth0`,
+      language: "bash",
+      tip: "Video call ต้องการ Latency ต่ำ (<100ms) มากกว่า Bandwidth สูง — 5Mbps + 50ms ดีกว่า 100Mbps + 300ms",
+    },
+    {
+      title: "Unicast, Multicast, Broadcast คืออะไร?",
+      body: "การส่งข้อมูลในเครือข่ายแบ่งตามจำนวนผู้รับ:",
+      table: {
+        header: ["ประเภท", "ผู้รับ", "ตัวอย่าง", "Address"],
+        rows: [
+          ["Unicast", "1 คน", "เปิดเว็บ, SSH", "IP เดียว เช่น 192.168.1.10"],
+          ["Broadcast", "ทุกคนใน subnet", "ARP Request, DHCP Discover", "255.255.255.255 หรือ x.x.x.255"],
+          ["Multicast", "กลุ่มที่สมัครไว้", "Video streaming, OSPF Hello", "224.0.0.0 – 239.255.255.255"],
+          ["Anycast", "ใกล้ที่สุด 1 คน", "DNS root servers, CDN", "ที่อยู่เดียวกันหลาย server"],
+        ],
+      },
+      warning: "Broadcast มากเกินไปทำให้ network ช้า! นั่นคือเหตุผลที่ใช้ VLAN แบ่ง Broadcast Domain",
+    },
+  ],
   mermaidDiagram: `graph LR
     PC1[💻 PC1] --> SW[🔀 Switch]
     PC2[💻 PC2] --> SW
@@ -439,6 +501,69 @@ const ipv4: Lesson = {
   ],
   prerequisites: ["osi-model", "tcpip-model"],
   concepts: ["IPv4", "Octet", "Binary", "Subnet Mask", "CIDR", "Network ID", "Host ID", "Broadcast", "Network Address", "VLSM", "Private IP", "Public IP"],
+  sections: [
+    {
+      title: "IPv4 Address คืออะไร?",
+      body: "IPv4 Address คือ 'ที่อยู่บ้าน' ของอุปกรณ์ในเครือข่าย — อุปกรณ์ทุกตัวต้องมี IP ที่ไม่ซ้ำกันในเครือข่ายเดียวกัน\n\nIPv4 = 32 bits แบ่งเป็น 4 ส่วน (Octet) คั่นด้วยจุด เช่น 192.168.1.100\nแต่ละ Octet = 8 bits = ค่าได้ 0-255",
+      table: {
+        header: ["Class", "Range (1st octet)", "Default Mask", "ใช้กับ"],
+        rows: [
+          ["A", "1-126", "/8 (255.0.0.0)", "ใหญ่มาก: ISP, รัฐบาล"],
+          ["B", "128-191", "/16 (255.255.0.0)", "กลาง: มหาวิทยาลัย, บริษัทใหญ่"],
+          ["C", "192-223", "/24 (255.255.255.0)", "เล็ก: บ้าน, SME"],
+          ["D", "224-239", "N/A", "Multicast"],
+          ["E", "240-255", "N/A", "Reserved/Research"],
+        ],
+      },
+      tip: "127.x.x.x = Loopback (localhost) — ping 127.0.0.1 ทดสอบว่า network stack ทำงานปกติ",
+    },
+    {
+      title: "Private vs Public IP — ต่างกันยังไง?",
+      body: "Private IP คือ IP สำหรับใช้ภายในองค์กร/บ้าน ไม่ route บน Internet\nPublic IP คือ IP จริงบน Internet — ต้องขอจาก ISP",
+      table: {
+        header: ["Range", "Class", "จำนวน host"],
+        rows: [
+          ["10.0.0.0 – 10.255.255.255", "A", "16 ล้าน+"],
+          ["172.16.0.0 – 172.31.255.255", "B", "1 ล้าน+"],
+          ["192.168.0.0 – 192.168.255.255", "C", "65,534"],
+          ["169.254.x.x", "APIPA", "เมื่อ DHCP ไม่ตอบ"],
+        ],
+      },
+      warning: "ใช้ 10.x.x.x สำหรับองค์กรใหญ่, 172.16-31.x.x สำหรับ DC, 192.168.x.x สำหรับสำนักงานเล็ก/บ้าน",
+    },
+    {
+      title: "Subnetting และ CIDR — แบ่ง network อย่างไร",
+      body: "Subnet Mask บอกว่า bits ไหนเป็น Network ส่วน bits ไหนเป็น Host\n\nCIDR Notation: 192.168.1.0/24 หมายถึง 24 bits แรกเป็น network → 8 bits สุดท้ายเป็น host → 2^8 - 2 = 254 hosts\n\nการคำนวณ Subnet:\n- Network Address = IP & Mask\n- Broadcast = Network + ขนาด subnet - 1\n- Usable hosts = 2^(host bits) - 2",
+      table: {
+        header: ["CIDR", "Subnet Mask", "จำนวน Host", "ใช้กับ"],
+        rows: [
+          ["/30", "255.255.255.252", "2 hosts", "WAN point-to-point link"],
+          ["/29", "255.255.255.248", "6 hosts", "Management subnet เล็ก"],
+          ["/28", "255.255.255.240", "14 hosts", "VLAN เล็ก"],
+          ["/27", "255.255.255.224", "30 hosts", "VLAN กลาง"],
+          ["/24", "255.255.255.0", "254 hosts", "VLAN ทั่วไป"],
+          ["/22", "255.255.252.0", "1022 hosts", "VLAN ใหญ่"],
+          ["/16", "255.255.0.0", "65534 hosts", "Site ขนาดใหญ่"],
+        ],
+      },
+      code: `# คำนวณ subnet ด้วย ipcalc
+ipcalc 192.168.10.0/26
+
+# ผลที่ได้:
+# Address:   192.168.10.0
+# Netmask:   255.255.255.192 = 26
+# Network:   192.168.10.0/26
+# HostMin:   192.168.10.1
+# HostMax:   192.168.10.62
+# Broadcast: 192.168.10.63
+# Hosts/Net: 62
+
+# Python คำนวณ subnet
+python3 -c "import ipaddress; n=ipaddress.IPv4Network('10.0.0.0/22'); print(list(n.hosts())[:3])"`,
+      language: "bash",
+      tip: "จำสูตร: /24=254, /25=126, /26=62, /27=30, /28=14, /29=6, /30=2 — แต่ละ step ลดครึ่ง",
+    },
+  ],
   mermaidDiagram: `graph LR
     subgraph IP["192.168.1.100 /24"]
       NET["Network: 192.168.1.0"]
@@ -519,6 +644,79 @@ const vlanLesson: Lesson = {
   ],
   prerequisites: ["osi-model", "ipv4-addressing"],
   concepts: ["VLAN", "Access Port", "Trunk Port", "802.1Q", "Native VLAN", "VLAN Tagging", "Broadcast Domain", "Layer 2 Segmentation"],
+  sections: [
+    {
+      title: "VLAN คืออะไร และทำไมต้องใช้?",
+      body: "VLAN (Virtual LAN) คือการแบ่ง network เสมือนบน Switch ตัวเดียว ทำให้แต่ละกลุ่มแยก Broadcast Domain กัน\n\nก่อน VLAN: Switch 1 ตัว = 1 Broadcast Domain → ARP, DHCP, STP เต็ม network\nหลัง VLAN: แบ่งได้สูงสุด 4094 VLAN บน Switch เดียว → แต่ละ VLAN แยกกันสมบูรณ์",
+      table: {
+        header: ["ข้อดีของ VLAN", "อธิบาย"],
+        rows: [
+          ["Security", "แผนกต่างๆ คุยกันไม่ได้ถ้าไม่ผ่าน Router/Firewall"],
+          ["Performance", "ลด Broadcast Storm — ARP ไม่ท่วม network ทั้งหมด"],
+          ["Flexibility", "ย้าย user ระหว่างแผนกโดยเปลี่ยน VLAN บน Switch port"],
+          ["Cost", "ไม่ต้องซื้อ Switch แยกต่างหากสำหรับแต่ละแผนก"],
+        ],
+      },
+      tip: "ตัวอย่าง: VLAN 10 = IT, VLAN 20 = HR, VLAN 30 = Finance → HR ไม่เห็น Traffic ของ IT",
+    },
+    {
+      title: "Access Port vs Trunk Port",
+      body: "Port บน Switch มี 2 ประเภทหลัก:\n\nAccess Port: รับเฉพาะ traffic จาก VLAN เดียว — ต่อกับ PC, Printer, IP Phone\nTrunk Port: รับ traffic จากหลาย VLAN พร้อมกัน — ต่อระหว่าง Switch หรือ Switch→Router",
+      table: {
+        header: ["", "Access Port", "Trunk Port"],
+        rows: [
+          ["ต่อกับ", "End device (PC, Phone)", "Switch, Router, AP"],
+          ["VLAN", "1 VLAN เท่านั้น", "หลาย VLAN พร้อมกัน"],
+          ["Tag", "ไม่มี VLAN tag (untagged)", "มี 802.1Q tag ทุก frame"],
+          ["Native VLAN", "N/A", "Frame ไม่มี tag = Native VLAN (default 1)"],
+        ],
+      },
+      code: `! Cisco — สร้าง VLAN และ configure port
+vlan 10
+ name IT_Department
+vlan 20
+ name HR_Department
+
+! Access port สำหรับ PC
+interface GigabitEthernet0/1
+ switchport mode access
+ switchport access vlan 10
+
+! Trunk port ไปยัง Switch อื่น
+interface GigabitEthernet0/24
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30
+ switchport trunk native vlan 999
+
+! ตรวจสอบ
+show vlan brief
+show interfaces trunk`,
+      language: "cisco",
+    },
+    {
+      title: "Inter-VLAN Routing — ให้ VLAN ต่างกันคุยกันได้",
+      body: "VLAN แยก Broadcast Domain — ดังนั้น PC ใน VLAN 10 จะคุยกับ PC ใน VLAN 20 ไม่ได้\nต้องผ่าน Layer 3 (Router หรือ L3 Switch)\n\n2 วิธีทำ Inter-VLAN Routing:\n1. Router-on-a-Stick: Router 1 port ต่อ trunk → สร้าง sub-interface ต่อ VLAN\n2. Layer 3 Switch (SVIs): สร้าง SVI (interface VLAN X) บน L3 Switch",
+      code: `! Router-on-a-Stick
+interface GigabitEthernet0/0.10
+ encapsulation dot1q 10
+ ip address 10.10.10.1 255.255.255.0
+!
+interface GigabitEthernet0/0.20
+ encapsulation dot1q 20
+ ip address 10.20.20.1 255.255.255.0
+
+! Layer 3 Switch SVIs (ดีกว่า — ไม่ต้องใช้ Router)
+interface Vlan10
+ ip address 10.10.10.1 255.255.255.0
+ no shutdown
+interface Vlan20
+ ip address 10.20.20.1 255.255.255.0
+ no shutdown
+ip routing    ! เปิด routing บน L3 Switch`,
+      language: "cisco",
+      warning: "อย่าลืม 'ip routing' บน L3 Switch ไม่งั้น SVIs จะ up แต่ route ไม่ได้",
+    },
+  ],
   mermaidDiagram: `graph LR
     subgraph SW ["Switch"]
       P1["Port 1\nAccess VLAN10"]
@@ -601,6 +799,61 @@ const ospfLesson: Lesson = {
   ],
   prerequisites: ["ipv4-addressing", "vlan"],
   concepts: ["OSPF", "Link-State", "SPF", "LSA", "LSDB", "Area", "Backbone Area 0", "DR", "BDR", "Hello Packet", "Neighbor", "Adjacency", "Cost"],
+  sections: [
+    {
+      title: "OSPF คืออะไร — Link-State Routing",
+      body: "OSPF (Open Shortest Path First) เป็น Link-State Routing Protocol ใช้ Dijkstra's SPF Algorithm หา shortest path\n\nต่างจาก Distance-Vector (RIP) ที่ส่งแค่ routing table:\nOSPF แชร์ topology ทั้งหมด (Link-State Advertisement) ทุก router เห็นแผนที่เดียวกัน → คำนวณ path เอง",
+      table: {
+        header: ["OSPF State", "ความหมาย"],
+        rows: [
+          ["Down", "ยังไม่ได้รับ Hello"],
+          ["Init", "ได้รับ Hello แต่ Router ID ตัวเองยังไม่อยู่ใน Hello ของอีกฝั่ง"],
+          ["2-Way", "เห็นกันแล้ว — DR/BDR election เริ่ม"],
+          ["ExStart", "เจรจา Master/Slave + DBD sequence number"],
+          ["Exchange", "แลก DBD (Database Description)"],
+          ["Loading", "ส่ง LSR/LSU แลก LSA ที่ขาดไป"],
+          ["Full", "LSDB ตรงกัน — Adjacency สมบูรณ์ ✅"],
+        ],
+      },
+      tip: "จำ OSPF States: 'Down, Init, 2-Way, ExStart, Exchange, Loading, Full' หรือ 'Di I 2E EL F'",
+    },
+    {
+      title: "OSPF Areas — ทำไมต้องแบ่ง Area?",
+      body: "เมื่อ network ใหญ่ขึ้น LSDB ก็ใหญ่ขึ้น → SPF calculation ใช้ CPU มาก\nแก้ด้วยการแบ่ง Area ให้ LSA ไม่ท่วม network ทั้งหมด\n\nArea 0 (Backbone Area): ทุก Area ต้องต่อกับ Area 0\nArea อื่น: แบ่งย่อยเพื่อลด LSDB size\n\nRouter ประเภทต่างๆ:\n- Internal Router: อยู่ใน Area เดียว\n- ABR (Area Border Router): เชื่อมระหว่าง Area\n- ASBR (AS Boundary Router): เชื่อมกับ routing protocol อื่น",
+      code: `! OSPF Basic Configuration (Cisco)
+router ospf 1
+ router-id 1.1.1.1
+ network 192.168.1.0 0.0.0.255 area 0
+ network 10.0.0.0 0.0.0.3 area 0
+
+! Passive interface (ไม่ส่ง Hello ออก LAN)
+passive-interface GigabitEthernet0/1
+
+! ตรวจสอบ OSPF
+show ip ospf neighbor        ! ดู adjacency state
+show ip ospf database        ! ดู LSDB
+show ip route ospf           ! ดู OSPF routes (O, O IA)
+debug ip ospf events         ! debug hello/adj`,
+      language: "cisco",
+    },
+    {
+      title: "DR/BDR Election บน Multi-Access Network",
+      body: "บน Ethernet (Multi-Access network) ถ้า 5 router ต่างทำ Full adjacency กันเอง = 10 adjacencies → flood LSA เยอะมาก\n\nแก้ด้วย DR (Designated Router) และ BDR (Backup DR):\n- Router อื่นทำ adjacency กับ DR/BDR เท่านั้น\n- DR flood LSA แทนทุกคน\n\nElection: priority สูงสุดชนะ (default 1), ถ้าเท่ากันใช้ Router ID สูงสุด",
+      code: `! ตั้ง OSPF Priority (0 = ไม่เข้าชิง DR/BDR)
+interface GigabitEthernet0/0
+ ip ospf priority 100    ! ต้องการเป็น DR
+
+! ดู DR/BDR
+show ip ospf interface GigabitEthernet0/0
+
+! OSPF Cost — ยิ่งต่ำยิ่งดี
+! Cost = Reference BW / Interface BW = 100Mbps / BW
+! GigE = 100M/1000M = 1 (ปรับ reference BW ถ้าใช้ 10G)
+auto-cost reference-bandwidth 10000   ! 10Gbps reference`,
+      language: "cisco",
+      warning: "DR/BDR election เกิดครั้งเดียวตอน first neighbor up — ถ้าอยากเปลี่ยน DR ต้อง reset OSPF process ('clear ip ospf process')",
+    },
+  ],
   mermaidDiagram: `graph LR
     subgraph Area0 ["Area 0 (Backbone)"]
       ABR1[ABR1]
@@ -687,6 +940,64 @@ const bgpLesson: Lesson = {
   ],
   prerequisites: ["ospf"],
   concepts: ["BGP", "eBGP", "iBGP", "AS", "ASN", "Neighbor", "TCP 179", "NLRI", "UPDATE", "OPEN", "KEEPALIVE", "AS Path", "Local Preference", "MED", "Weight", "Next-hop", "Prefix-list", "Route-map", "BGP Best Path"],
+  sections: [
+    {
+      title: "BGP คืออะไร — Internet Routing Protocol",
+      body: "BGP (Border Gateway Protocol) คือ Routing Protocol ที่ใช้บน Internet — ทุก ISP, Cloud Provider, และ large enterprise ใช้ BGP\n\nBGP เป็น Path Vector Protocol — ไม่ได้เลือก path ตาม bandwidth หรือ latency แต่เลือกตาม Policy (AS Path, Local Preference, MED)\n\neBGP: เชื่อมระหว่าง AS ต่างๆ (ISP ↔ Customer)\niBGP: เชื่อมภายใน AS เดียวกัน (router หลายตัวในบริษัทเดียว)",
+      table: {
+        header: ["", "eBGP", "iBGP"],
+        rows: [
+          ["ใช้กับ", "ระหว่าง AS", "ภายใน AS เดียวกัน"],
+          ["TTL", "1 (adjacent only)", "255"],
+          ["AD", "20 (ต่ำกว่า = ดีกว่า)", "200"],
+          ["Next-hop", "เปลี่ยนเป็น IP ตัวเอง", "ไม่เปลี่ยน (ต้องมี IGP)"],
+          ["Full mesh", "ไม่จำเป็น", "ต้องมี (หรือใช้ RR)"],
+        ],
+      },
+    },
+    {
+      title: "BGP Path Attributes และ Best Path Selection",
+      body: "BGP ใช้ Attributes เลือก Best Path โดยดูตามลำดับ (Weight ดีกว่า → ดูตัวถัดไป):",
+      table: {
+        header: ["ลำดับ", "Attribute", "ค่าที่ดีกว่า", "Scope"],
+        rows: [
+          ["1", "Weight (Cisco only)", "สูงกว่า", "Local router เท่านั้น"],
+          ["2", "Local Preference", "สูงกว่า", "ภายใน AS"],
+          ["3", "Locally originated", "Prefer local", "-"],
+          ["4", "AS Path length", "สั้นกว่า", "ทั้ง Internet"],
+          ["5", "Origin (i > e > ?)", "i ดีกว่า", "ทั้ง Internet"],
+          ["6", "MED", "ต่ำกว่า", "ระหว่าง AS"],
+          ["7", "eBGP > iBGP", "eBGP ดีกว่า", "-"],
+          ["8", "IGP metric to next-hop", "ต่ำกว่า", "-"],
+        ],
+      },
+      tip: "จำลำดับ: 'We Love Oranges As Oranges Mean Pure Refreshment' (Weight, Local-pref, Originated, AS-path, Origin, MED, Prefer-eBGP, Router-id)",
+    },
+    {
+      title: "BGP Configuration พื้นฐาน",
+      body: "BGP ต้องกำหนด neighbor (peer) แบบ manual — ไม่มี auto-discovery แบบ OSPF",
+      code: `! eBGP: เชื่อมกับ ISP (AS 65001)
+router bgp 65000              ! AS ของเรา
+ bgp router-id 1.1.1.1
+ neighbor 203.0.113.1 remote-as 65001   ! ISP peer
+ neighbor 203.0.113.1 description ISP-A
+ 
+ ! Advertise network ของเรา
+ network 198.51.100.0 mask 255.255.255.0
+
+! iBGP: เชื่อม router ภายใน AS เดียวกัน
+router bgp 65000
+ neighbor 10.0.0.2 remote-as 65000      ! same AS = iBGP
+ neighbor 10.0.0.2 update-source Loopback0
+
+! ตรวจสอบ
+show bgp summary              ! ดู neighbor state
+show bgp ipv4 unicast         ! ดู BGP table
+show ip route bgp             ! ดู BGP routes ใน routing table`,
+      language: "cisco",
+      warning: "BGP session ต้องการ TCP 179 — ตรวจ ACL/Firewall ว่าไม่ block port 179 ระหว่าง peer",
+    },
+  ],
   mermaidDiagram: `graph LR
     subgraph AS65001 ["AS 65001 (Company)"]
       R1["R1\n10.0.0.1"]
@@ -793,6 +1104,88 @@ const firewallAcl: Lesson = {
   ],
   prerequisites: ["ipv4-addressing", "vlan"],
   concepts: ["ACL", "Standard ACL", "Extended ACL", "Named ACL", "NAT", "PAT", "Static NAT", "Dynamic NAT", "Inside Local", "Inside Global", "Stateful Firewall", "Zone-Based Firewall", "DMZ", "Stateless vs Stateful"],
+  sections: [
+    {
+      title: "ACL (Access Control List) — กรอง Traffic",
+      body: "ACL คือ rule-set ที่กำหนดว่า traffic ไหนผ่านได้หรือไม่ — ทำงานบน Router บน interface\n\nStandard ACL (1-99): กรองแค่ Source IP — วางใกล้ Destination\nExtended ACL (100-199): กรอง Source+Destination IP, Protocol, Port — วางใกล้ Source",
+      table: {
+        header: ["ACL Type", "Match on", "วางที่ไหน", "ตัวอย่าง"],
+        rows: [
+          ["Standard (1-99)", "Source IP only", "ใกล้ Destination", "Block host 192.168.1.5"],
+          ["Extended (100-199)", "Src+Dst IP, Protocol, Port", "ใกล้ Source", "Allow HTTP to server only"],
+          ["Named ACL", "ชื่อใดก็ได้ (standard/extended)", "ยืดหยุ่นกว่า", "WEB-TRAFFIC-IN"],
+        ],
+      },
+      code: `! Standard ACL — block host จากเข้า network
+access-list 10 deny   192.168.1.5
+access-list 10 permit any
+
+! Extended ACL — อนุญาตเฉพาะ HTTP/HTTPS ไปยัง web server
+access-list 110 permit tcp any host 10.0.0.80 eq 80
+access-list 110 permit tcp any host 10.0.0.80 eq 443
+access-list 110 deny   ip  any any
+
+! Named ACL (แก้ไขได้ง่ายกว่า — มี sequence number)
+ip access-list extended BLOCK-TELNET
+ deny   tcp any any eq 23
+ permit ip  any any
+
+! Apply บน interface
+interface GigabitEthernet0/0
+ ip access-group 110 in     ! inbound
+ ip access-group 10  out    ! outbound
+
+show ip access-lists    ! ดู hit count`,
+      language: "cisco",
+      warning: "ทุก ACL มี implicit 'deny any' ท้ายสุด — ถ้าลืม permit จะ block ทุกอย่าง!",
+    },
+    {
+      title: "NAT (Network Address Translation) — 3 ประเภทหลัก",
+      body: "NAT แปลง Private IP → Public IP เพื่อให้ออก Internet ได้\n\nปัญหาที่ NAT แก้: IPv4 มีแค่ 4.3 พันล้าน address แต่อุปกรณ์มีมากกว่า → ใช้ Private IP ภายในและแชร์ Public IP 1 ตัว",
+      table: {
+        header: ["ประเภท NAT", "อธิบาย", "ใช้กับ"],
+        rows: [
+          ["Static NAT", "1:1 map Private→Public ตายตัว", "Server ที่ต้องเข้าจาก Internet"],
+          ["Dynamic NAT", "Pool of Public IPs, assign on demand", "องค์กรมี Public IP หลายตัว"],
+          ["PAT / NAT Overload", "Many:1 — แชร์ Public IP 1 ตัว ใช้ Port แยก", "บ้าน, ออฟฟิศส่วนใหญ่"],
+        ],
+      },
+      code: `! PAT (NAT Overload) — ที่ใช้กันบ้าน/ออฟฟิศ
+interface GigabitEthernet0/0
+ ip address 203.0.113.1 255.255.255.0
+ ip nat outside
+
+interface GigabitEthernet0/1
+ ip address 192.168.1.1 255.255.255.0
+ ip nat inside
+
+! ACL กำหนด traffic ที่จะ NAT
+access-list 1 permit 192.168.1.0 0.0.0.255
+
+! NAT Overload ใช้ IP ของ interface ขาออก
+ip nat inside source list 1 interface GigabitEthernet0/0 overload
+
+! Static NAT: Server ภายใน 192.168.1.100 → Public 203.0.113.50
+ip nat inside source static 192.168.1.100 203.0.113.50
+
+show ip nat translations    ! ดู NAT table
+show ip nat statistics      ! hits/misses`,
+      language: "cisco",
+    },
+    {
+      title: "Firewall Zones — Stateful vs Stateless",
+      body: "Stateless Firewall: กรองทุก packet แยกกัน ตาม ACL — เร็วแต่ไม่ track state\nStateful Firewall: track TCP/UDP sessions — return traffic ผ่านอัตโนมัติ ปลอดภัยกว่า\n\nZone-Based Firewall (Cisco): กำหนด zone (inside/outside/dmz) แล้ว policy ระหว่าง zone",
+      table: {
+        header: ["Zone", "Trust Level", "เก็บอะไร"],
+        rows: [
+          ["Inside", "High", "LAN ภายใน — PC, Server"],
+          ["DMZ", "Medium", "Server ที่เปิดให้ Internet เข้าได้ เช่น Web, Mail"],
+          ["Outside", "Low (zero)", "Internet — untrusted"],
+        ],
+      },
+      tip: "DMZ (Demilitarized Zone) = buffer zone — ถ้า Web Server โดน hack, attacker ยังอยู่ใน DMZ และเข้า Inside ไม่ได้",
+    },
+  ],
   mermaidDiagram: `graph LR
     subgraph Inside ["Inside (192.168.1.0/24)"]
       PC["💻 PC\n192.168.1.10"]
@@ -888,6 +1281,73 @@ const spanningTree: Lesson = {
   ],
   prerequisites: ["vlan"],
   concepts: ["STP", "RSTP", "Root Bridge", "Bridge ID", "Port Cost", "BPDUs", "PortFast", "BPDU Guard", "EtherChannel"],
+  sections: [
+    {
+      title: "ทำไมต้องมี Spanning Tree?",
+      body: "ในเครือข่าย Layer 2 ถ้า Switch เชื่อมกันเป็น loop จะเกิด Broadcast Storm:\n→ frame วนซ้ำไม่หยุด → bandwidth เต็ม 100% → network ล่มทั้งหมด\n\nSTP แก้ปัญหาโดย block port บางตัวทำให้ไม่มี loop แต่ยังมี redundancy\nเมื่อ link ที่ active ขาด STP จะ unblock port ที่ block ไว้ → failover อัตโนมัติ",
+      table: {
+        header: ["STP Version", "IEEE Standard", "Convergence", "ใช้กับ"],
+        rows: [
+          ["STP", "802.1D", "30-50 วินาที", "Legacy — เลิกใช้แล้ว"],
+          ["RSTP", "802.1w", "1-2 วินาที", "Standard ปัจจุบัน"],
+          ["MSTP", "802.1s", "1-2 วินาที", "หลาย VLAN — map หลาย VLAN ต่อ instance"],
+          ["PVST+", "Cisco proprietary", "1-2 วินาที", "1 STP instance ต่อ VLAN — Cisco default"],
+          ["Rapid PVST+", "Cisco proprietary", "<1 วินาที", "RSTP + per-VLAN — แนะนำสำหรับ Cisco"],
+        ],
+      },
+    },
+    {
+      title: "Root Bridge Election และ Port Roles",
+      body: "Root Bridge = Switch ที่เป็น 'ศูนย์กลาง' ของ STP topology\n\nElection: Bridge ID ต่ำสุดชนะ = Priority (default 32768) + MAC Address\n→ ปรับ Priority ต่ำลง เพื่อบังคับให้ Switch ตัวที่ต้องการเป็น Root Bridge",
+      table: {
+        header: ["Port Role", "สถานะ", "อธิบาย"],
+        rows: [
+          ["Root Port (RP)", "Forwarding", "Port บน non-root switch ที่ใกล้ Root Bridge ที่สุด"],
+          ["Designated Port (DP)", "Forwarding", "Port ที่ดีที่สุดสำหรับ segment นั้น (รวม Root Bridge ทุก port)"],
+          ["Alternate Port", "Blocking", "Backup ของ Root Port — RSTP"],
+          ["Backup Port", "Blocking", "Backup ของ Designated Port — RSTP"],
+          ["Disabled", "Disabled", "Admin shutdown"],
+        ],
+      },
+      code: `! กำหนด Root Bridge (ลด Priority)
+spanning-tree vlan 10 priority 4096    ! Root Bridge สำหรับ VLAN 10
+spanning-tree vlan 20 priority 8192    ! Secondary Root
+
+! หรือใช้คำสั่งง่ายๆ
+spanning-tree vlan 10 root primary
+spanning-tree vlan 20 root secondary
+
+! PortFast — bypass STP states สำหรับ port ต่อ PC (ไม่ใช่ Switch!)
+interface GigabitEthernet0/1
+ spanning-tree portfast
+
+! BPDU Guard — ถ้าได้รับ BPDU บน PortFast port → err-disable ทันที
+spanning-tree portfast bpduguard default   ! enable global
+
+! ตรวจสอบ
+show spanning-tree vlan 10
+show spanning-tree summary`,
+      language: "cisco",
+      warning: "อย่าเปิด PortFast บน port ที่ต่อกับ Switch — จะเกิด loop ได้! PortFast ใช้สำหรับ end device เท่านั้น",
+    },
+    {
+      title: "EtherChannel — Link Aggregation",
+      body: "EtherChannel รวมหลาย Physical link เป็น 1 Logical link:\n• เพิ่ม bandwidth: 4x 1G link = 4G logical\n• Redundancy: ถ้า 1 link ขาด ยังมีลิงค์อื่น\n• STP มองเห็นเป็น 1 link → ไม่ block\n\nMode: Static (on), LACP (IEEE 802.3ad — แนะนำ), PAgP (Cisco only)",
+      code: `! EtherChannel ด้วย LACP
+interface range GigabitEthernet0/1-4
+ channel-group 1 mode active    ! LACP active
+ 
+interface Port-channel 1
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30
+
+! ตรวจสอบ
+show etherchannel summary       ! ดู state: SU = bundled
+show etherchannel port-channel  ! ดูรายละเอียด`,
+      language: "cisco",
+      tip: "LACP mode: active+active หรือ active+passive = negotiate สำเร็จ; passive+passive = ไม่ negotiate",
+    },
+  ],
   commands: [
     { command: "spanning-tree mode rapid-pvst", description: "Enable RSTP (Rapid PVST+) — default บน Cisco" },
     { command: "spanning-tree vlan 10 priority 4096", description: "Force switch เป็น Root Bridge สำหรับ VLAN 10 (ต่ำสุดชนะ)" },
@@ -957,6 +1417,66 @@ const eigrpLesson: Lesson = {
   ],
   prerequisites: ["ospf"],
   concepts: ["EIGRP", "DUAL", "Successor", "Feasible Successor", "AD/FD", "Named Mode", "Autonomous System", "K-values"],
+  sections: [
+    {
+      title: "EIGRP คืออะไร — Hybrid Routing Protocol",
+      body: "EIGRP (Enhanced Interior Gateway Routing Protocol) เป็น Cisco proprietary protocol ที่ผสม Distance-Vector และ Link-State:\n\n• Partial updates: ส่ง update เฉพาะเมื่อ topology เปลี่ยน (ไม่ส่งทุก 30 วินาทีแบบ RIP)\n• Bounded updates: ส่งเฉพาะ router ที่ได้รับผลกระทบ\n• DUAL algorithm: guarantee loop-free path และ fast convergence\n• Multi-protocol: IPv4, IPv6, IPX, AppleTalk",
+      table: {
+        header: ["เปรียบเทียบ", "RIP", "OSPF", "EIGRP"],
+        rows: [
+          ["Type", "Distance-Vector", "Link-State", "Advanced DV / Hybrid"],
+          ["Algorithm", "Bellman-Ford", "Dijkstra SPF", "DUAL"],
+          ["Metric", "Hop count", "Cost (BW)", "Composite (BW+Delay+Load+Reliability)"],
+          ["Convergence", "ช้า (30s update)", "เร็ว", "เร็วมาก (pre-computed backup)"],
+          ["Update", "Periodic broadcast", "LSA flood", "Partial bounded"],
+          ["AD", "120", "110", "90 (internal) / 170 (external)"],
+        ],
+      },
+    },
+    {
+      title: "DUAL Algorithm — Successor และ Feasible Successor",
+      body: "DUAL (Diffusing Update Algorithm) เลือก best path และ backup path ล่วงหน้าก่อน link จะขาด\n\nFeasible Distance (FD) = metric รวมจาก router ตัวนี้ไปถึง destination\nAdvertised Distance (AD) = metric ที่ neighbor บอกว่าใช้ไปถึง destination\n\nSuccessor: route ที่ดีที่สุด (FD ต่ำสุด) → ใส่ใน routing table\nFeasible Successor: backup route ที่ผ่าน Feasibility Condition: AD < FD ของ Successor\n→ ถ้า Successor ขาด, FS เข้ามาแทนทันที ไม่ต้อง recalculate",
+      code: `! EIGRP Configuration (Classic mode)
+router eigrp 100              ! AS 100
+ network 192.168.1.0 0.0.0.255
+ network 10.0.0.0 0.0.0.3
+ no auto-summary              ! สำคัญ! ปิด auto-summary
+
+! EIGRP Named Mode (IOS 15.0.1M+ แนะนำ)
+router eigrp ENTERPRISE
+ address-family ipv4 unicast autonomous-system 100
+  network 10.0.0.0 0.255.255.255
+  eigrp router-id 1.1.1.1
+
+! ตรวจสอบ
+show ip eigrp neighbors          ! ดู neighbor + hold time
+show ip eigrp topology           ! ดู Successor, FS, FD, AD
+show ip eigrp topology all-links ! ดู route ทั้งหมด
+show ip route eigrp              ! ดู EIGRP routes (D, D EX)`,
+      language: "cisco",
+      tip: "Feasibility Condition: AD < FD (Successor) — ป้องกัน routing loop ใน DUAL",
+    },
+    {
+      title: "EIGRP Metric — K-values",
+      body: "EIGRP Metric คำนวณจาก K-values (default K1=1, K2=0, K3=1, K4=0, K5=0):\n\nMetric = [(K1×BW + K3×Delay)] × 256\n(เมื่อ K2=K4=K5=0 ซึ่งเป็น default)\n\nBW component = 10^7 / min(BW ตลอด path) × 256\nDelay component = sum(all delays) / 10 × 256\n\nค่า Delay บน interface: GigE = 10μs, FastEthernet = 100μs, Serial T1 = 20000μs",
+      code: `! ดู metric รายละเอียด
+show ip eigrp topology 10.0.1.0/24
+! Composite metric = (Bandwidth + Delay) × 256
+
+! ปรับ bandwidth บน interface (เพื่อ metric calculation)
+interface Serial0/0
+ bandwidth 1544               ! T1 = 1544 Kbps
+
+! ปรับ delay
+interface GigabitEthernet0/0
+ delay 10                     ! 10 tens-of-microseconds = 100μs
+
+! Summarization
+interface GigabitEthernet0/0
+ ip summary-address eigrp 100 10.0.0.0 255.255.0.0`,
+      language: "cisco",
+    },
+  ],
   commands: [
     { command: "router eigrp 100", description: "Enable EIGRP AS 100 (classic mode)" },
     { command: "network 192.168.1.0 0.0.0.255", description: "Advertise network ด้วย wildcard mask" },
@@ -1027,6 +1547,60 @@ const ipv6Lesson: Lesson = {
   ],
   prerequisites: ["ipv4-addressing"],
   concepts: ["IPv6", "128-bit", "Global Unicast", "Link-local", "SLAAC", "NDP", "EUI-64", "OSPFv3", "Dual Stack", "6to4"],
+  sections: [
+    {
+      title: "ทำไมต้องใช้ IPv6?",
+      body: "IPv4 มีแค่ 2^32 ≈ 4.3 พันล้าน address — หมดแล้ว!\nIPv6 มี 2^128 ≈ 340 undecillion (3.4 × 10^38) — เพียงพอสำหรับอุปกรณ์ทุกชิ้นบนโลกและอวกาศ\n\nIPv6 = 128 bits, เขียนเป็น Hex 8 กลุ่ม คั่นด้วย ':' เช่น 2001:0db8:85a3:0000:0000:8a2e:0370:7334\n\nย่อ IPv6 ได้:\n1. ตัดศูนย์นำหน้าในแต่ละกลุ่ม: 0db8 → db8\n2. กลุ่ม 0000 ที่ติดกัน ย่อเป็น :: ได้ครั้งเดียว: ::1 = loopback",
+      table: {
+        header: ["ประเภท IPv6", "Prefix", "เทียบกับ IPv4"],
+        rows: [
+          ["Global Unicast", "2000::/3", "Public IP — route บน Internet"],
+          ["Link-Local", "FE80::/10", "APIPA (169.254.x.x) — ใช้บน link เดียว เท่านั้น"],
+          ["Unique Local", "FC00::/7", "Private IP (10.x, 172.16-31.x, 192.168.x)"],
+          ["Multicast", "FF00::/8", "224.0.0.0/4 — FF02::1 = all nodes"],
+          ["Loopback", "::1/128", "127.0.0.1"],
+          ["Unspecified", "::/128", "0.0.0.0"],
+        ],
+      },
+      tip: "Link-Local (FE80::/10) สร้างอัตโนมัติทุก interface — ใช้สำหรับ NDP และ neighbor discovery ไม่ต้องกำหนดเอง",
+    },
+    {
+      title: "SLAAC และ EUI-64 — IPv6 Auto-Configuration",
+      body: "IPv6 ไม่จำเป็นต้องใช้ DHCP — มีกลไก SLAAC (Stateless Address Autoconfiguration)\n\nขั้นตอน SLAAC:\n1. PC สร้าง Link-Local address จาก MAC address (EUI-64)\n2. ส่ง Router Solicitation (RS) → FF02::2 (all routers)\n3. Router ตอบ Router Advertisement (RA) พร้อม prefix (เช่น 2001:db8::/64)\n4. PC รวม prefix + EUI-64 interface ID → ได้ Global Unicast address\n\nEUI-64: แปลง 48-bit MAC → 64-bit Interface ID โดยแทรก FF:FE กลาง และ flip bit ที่ 7",
+      code: `# Linux: ดู IPv6 address
+ip -6 addr show
+ip -6 route show
+
+# ทดสอบ IPv6 connectivity
+ping6 ::1                        # loopback
+ping6 fe80::1%eth0               # link-local (ต้องระบุ interface)
+ping6 2001:db8::1                # global unicast
+
+# Cisco: configure IPv6
+interface GigabitEthernet0/0
+ ipv6 address 2001:db8:1::1/64  # static
+ ipv6 address autoconfig         # SLAAC
+ ipv6 enable                     # เปิดใช้ link-local เท่านั้น
+
+ipv6 unicast-routing             # เปิด IPv6 routing บน Cisco router`,
+      language: "bash",
+    },
+    {
+      title: "NDP (Neighbor Discovery Protocol) — แทน ARP ใน IPv6",
+      body: "IPv4 ใช้ ARP หา MAC จาก IP — IPv6 ใช้ NDP แทน (ไม่มี broadcast, ใช้ multicast)\n\nNDP Messages:\n• NS (Neighbor Solicitation): ถามว่า IP นี้ใครมี MAC อะไร\n• NA (Neighbor Advertisement): ตอบ MAC ของตัวเอง\n• RS (Router Solicitation): PC ขอ prefix จาก Router\n• RA (Router Advertisement): Router ตอบ prefix + default gateway\n• Redirect: บอก host ว่ามี better next-hop",
+      table: {
+        header: ["ICMPv6 Type", "Message", "แทน IPv4"],
+        rows: [
+          ["135", "Neighbor Solicitation (NS)", "ARP Request"],
+          ["136", "Neighbor Advertisement (NA)", "ARP Reply"],
+          ["133", "Router Solicitation (RS)", "DHCP Discover (ส่วนหนึ่ง)"],
+          ["134", "Router Advertisement (RA)", "DHCP Offer (ส่วนหนึ่ง)"],
+          ["137", "Redirect", "ICMP Redirect"],
+        ],
+      },
+      warning: "ต้อง allow ICMPv6 ทุก type บน Firewall — บล็อก ICMPv6 จะทำให้ IPv6 ใช้ไม่ได้ (NDP พัง, SLAAC พัง)",
+    },
+  ],
   commands: [
     { command: "ipv6 unicast-routing", description: "Enable IPv6 routing บน Router (Global)" },
     { command: "ipv6 address 2001:db8:1::1/64", description: "Assign Global Unicast IPv6 Address" },
@@ -1097,6 +1671,80 @@ const qosLesson: Lesson = {
   ],
   prerequisites: ["network-fundamentals"],
   concepts: ["DSCP", "CoS", "DiffServ", "LLQ", "CBWFQ", "WFQ", "Policing", "Shaping", "MQC", "Traffic Class"],
+  sections: [
+    {
+      title: "QoS คืออะไร — ทำไมต้องจัดคิว?",
+      body: "QoS (Quality of Service) คือการจัดลำดับความสำคัญของ traffic เมื่อ bandwidth ไม่พอ\n\nไม่มี QoS: เมื่อ link อิ่ม — Voice call กับ YouTube upload แย่ง bandwidth กัน → call choppy\nมี QoS: Voice ได้ priority สูงสุด → ผ่านก่อนเสมอ\n\nQoS จำเป็นเมื่อ: link อิ่ม (congestion) — ถ้า bandwidth เหลือเยอะ QoS ไม่มีผล",
+      table: {
+        header: ["Traffic Type", "QoS Priority", "ทำไม"],
+        rows: [
+          ["VoIP / Video Call", "สูงสุด (EF)", "Latency <150ms, Jitter <30ms, Loss <1%"],
+          ["Video Conferencing", "สูง (AF41)", "ต้องการ consistent bandwidth"],
+          ["Interactive (SSH, RDP)", "Medium-high (AF31)", "Latency-sensitive แต่ burst ได้"],
+          ["Business Apps (ERP)", "Medium (AF21)", "สำคัญแต่ tolerance สูงกว่า"],
+          ["File Transfer, Backup", "ต่ำ (AF11)", "Best-effort, delay ได้"],
+          ["YouTube, Social Media", "ต่ำสุด (CS1/BE)", "Scavenger — ใช้แค่ที่เหลือ"],
+        ],
+      },
+    },
+    {
+      title: "DSCP Marking — ติดป้ายกำกับ Traffic",
+      body: "DSCP (Differentiated Services Code Point) คือ 6-bit field ใน IP header ที่บอกว่า packet นี้มี priority เท่าไหร่\n\nMarkขึ้นต้น (trust boundary) ที่ edge — router ใน core เชื่อใน mark แล้วจัด queue ตาม",
+      table: {
+        header: ["DSCP Name", "Value", "PHB", "ใช้กับ"],
+        rows: [
+          ["EF (Expedited Forwarding)", "46 (101110)", "Low latency queue", "VoIP"],
+          ["CS5", "40 (101000)", "Signaling", "Call signaling (SIP)"],
+          ["AF41", "34 (100010)", "Assured Forwarding", "Video conferencing"],
+          ["AF31", "26 (011010)", "Assured Forwarding", "Mission-critical apps"],
+          ["AF21", "18 (010010)", "Assured Forwarding", "Business data"],
+          ["AF11", "10 (001010)", "Assured Forwarding", "File transfer"],
+          ["CS1/BE (Best Effort)", "0", "Best effort queue", "Default / browsing"],
+        ],
+      },
+      code: `! Cisco MQC (Modular QoS CLI) — 3 ขั้นตอน
+
+! 1. Class-map: classify traffic
+class-map match-any VOICE
+ match dscp ef               ! VoIP RTP
+class-map match-any VIDEO
+ match dscp af41
+class-map match-any CRITICAL
+ match dscp af31 af21
+
+! 2. Policy-map: กำหนด action
+policy-map WAN-OUT
+ class VOICE
+  priority 512               ! LLQ: guaranteed 512Kbps, พ้องก่อนเสมอ
+ class VIDEO
+  bandwidth percent 30       ! รับประกัน 30%
+ class CRITICAL
+  bandwidth percent 25
+ class class-default
+  fair-queue                 ! WFQ สำหรับ traffic ที่เหลือ
+
+! 3. Apply บน interface
+interface Serial0/0
+ service-policy output WAN-OUT`,
+      language: "cisco",
+      warning: "Priority queue (LLQ) สำหรับ VoIP เท่านั้น — ถ้าใส่ traffic มากเกินไปใน priority จะ starve traffic อื่น",
+    },
+    {
+      title: "Policing vs Shaping — ต่างกันยังไง?",
+      body: "ทั้งคู่ใช้จำกัด bandwidth แต่ต่างกันที่วิธีจัดการ traffic เกิน:\n\nPolicing: DROP packet ที่เกิน rate ทันที — latency ต่ำ ใช้บน inbound / customer edge\nShaping: BUFFER packet ที่เกิน rate แล้วส่งทีหลัง — latency สูงขึ้น แต่ไม่ drop — ใช้บน outbound WAN",
+      table: {
+        header: ["", "Policing", "Shaping"],
+        rows: [
+          ["Action เมื่อเกิน", "DROP (หรือ re-mark)", "BUFFER แล้วส่งทีหลัง"],
+          ["Latency", "ไม่เพิ่ม", "เพิ่มขึ้น"],
+          ["Packet loss", "มี", "ไม่มี (ถ้า buffer ไม่เต็ม)"],
+          ["ใช้บน", "Inbound, Service Provider", "Outbound WAN"],
+          ["Memory", "ไม่ต้องการ buffer", "ต้องการ buffer"],
+        ],
+      },
+      tip: "Rule of thumb: ใช้ Shaping บน outbound WAN ขาออกไป ISP, ใช้ Policing บน inbound จาก customer",
+    },
+  ],
   commands: [
     { command: "class-map match-any VOICE\n match dscp ef", description: "ระบุ Traffic Class: DSCP EF (Expedited Forwarding) = Voice" },
     { command: "policy-map QOS_POLICY\n class VOICE\n  priority 1000", description: "LLQ: Voice ได้ Guaranteed BW 1Mbps พร้อม Low Latency Queue" },
@@ -1161,6 +1809,72 @@ const dhcpDnsLesson: Lesson = {
   ],
   prerequisites: ["network-fundamentals", "ipv4-addressing"],
   concepts: ["DHCP", "DORA", "ip helper-address", "DHCP Relay", "DNS", "A Record", "CNAME", "MX", "Recursive Query", "TTL"],
+  sections: [
+    {
+      title: "DHCP — DORA Process",
+      body: "DHCP (Dynamic Host Configuration Protocol) แจก IP address อัตโนมัติ:\n\nD-O-R-A Process:\n1. Discover: Client broadcast ขอ IP (src: 0.0.0.0, dst: 255.255.255.255)\n2. Offer: Server ตอบ offer IP ที่ว่าง\n3. Request: Client เลือก offer และ broadcast บอกทุกคน\n4. Acknowledge: Server ยืนยัน, ส่ง IP + subnet + gateway + DNS + lease time",
+      table: {
+        header: ["DHCP Message", "Source", "Destination", "อธิบาย"],
+        rows: [
+          ["Discover", "0.0.0.0", "255.255.255.255", "Client หา DHCP server"],
+          ["Offer", "DHCP Server IP", "255.255.255.255", "Server เสนอ IP"],
+          ["Request", "0.0.0.0", "255.255.255.255", "Client ขอ IP ที่เลือก"],
+          ["ACK", "DHCP Server IP", "255.255.255.255", "Server confirm + ส่ง config"],
+        ],
+      },
+      code: `! Cisco DHCP Server
+ip dhcp pool OFFICE_LAN
+ network 192.168.1.0 255.255.255.0
+ default-router 192.168.1.1
+ dns-server 8.8.8.8 1.1.1.1
+ lease 7                     ! 7 วัน
+ domain-name netpath.local
+
+! Exclude IP ที่ไม่ต้องการแจก (router, server)
+ip dhcp excluded-address 192.168.1.1 192.168.1.20
+
+! DHCP Relay — ส่ง DHCP ข้าม subnet
+interface GigabitEthernet0/1
+ ip helper-address 10.0.0.100   ! IP ของ DHCP Server
+
+! ดู DHCP bindings
+show ip dhcp binding
+show ip dhcp pool`,
+      language: "cisco",
+      tip: "ถ้า DHCP server อยู่คนละ subnet ต้องใช้ 'ip helper-address' บน Router เพื่อ relay DHCP broadcast",
+    },
+    {
+      title: "DNS — Domain Name System",
+      body: "DNS แปลง domain name → IP address (Forward lookup) และ IP → domain (Reverse lookup)\n\nDNS Hierarchy:\n• Root servers (13 กลุ่ม, ใช้ anycast): รู้จัก TLD servers\n• TLD (Top-Level Domain) servers: .com, .th, .org\n• Authoritative DNS: เก็บ record จริงของ domain\n• Recursive Resolver: server ที่ client ถาม (ISP, 8.8.8.8, 1.1.1.1)",
+      table: {
+        header: ["DNS Record Type", "อธิบาย", "ตัวอย่าง"],
+        rows: [
+          ["A", "Hostname → IPv4", "www.example.com → 203.0.113.10"],
+          ["AAAA", "Hostname → IPv6", "www → 2001:db8::1"],
+          ["CNAME", "Alias → อีก hostname", "blog.example.com → www.example.com"],
+          ["MX", "Mail server สำหรับ domain", "example.com → mail.example.com (priority 10)"],
+          ["PTR", "IP → Hostname (Reverse)", "10.113.0.203.in-addr.arpa → www.example.com"],
+          ["NS", "Nameserver สำหรับ zone", "example.com NS → ns1.example.com"],
+          ["TXT", "ข้อความอิสระ", "SPF, DKIM, domain verification"],
+          ["SOA", "Start of Authority", "zone serial, TTL defaults, contact"],
+        ],
+      },
+      code: `# ทดสอบ DNS
+nslookup www.google.com           # query DNS
+nslookup www.google.com 8.8.8.8   # query specific DNS server
+
+dig www.google.com                # ละเอียดกว่า nslookup
+dig MX gmail.com                  # ดู mail server
+dig -x 8.8.8.8                    # reverse lookup
+dig @1.1.1.1 www.google.com A     # query Cloudflare DNS
+
+# ดู DNS cache (Windows)
+ipconfig /displaydns
+ipconfig /flushdns    # ล้าง DNS cache`,
+      language: "bash",
+      warning: "TTL (Time-To-Live) คือเวลา cache — ก่อนเปลี่ยน DNS record ให้ลด TTL ล่วงหน้า 24-48 ชม. ไม่งั้น change propagation ช้ามาก",
+    },
+  ],
   commands: [
     { command: "ip dhcp pool LAN_POOL\n network 192.168.1.0 255.255.255.0\n default-router 192.168.1.1\n dns-server 8.8.8.8\n lease 7", description: "สร้าง DHCP Pool พร้อม Gateway, DNS, Lease Time" },
     { command: "ip dhcp excluded-address 192.168.1.1 192.168.1.20", description: "ยกเว้น IP ที่ใช้งานอยู่จาก Pool" },
@@ -1229,6 +1943,62 @@ const wanLesson: Lesson = {
   ],
   prerequisites: ["network-fundamentals", "ospf"],
   concepts: ["MPLS", "Label Switching", "LSP", "IPsec", "IKEv2", "ESP", "GRE", "SD-WAN", "vEdge", "Underlay", "Overlay"],
+  sections: [
+    {
+      title: "WAN Technologies Overview",
+      body: "WAN (Wide Area Network) เชื่อมสาขา, Datacenter, Cloud ข้ามเมืองหรือประเทศ\n\nวิวัฒนาการ WAN:\nFrame Relay / ATM (legacy) → MPLS (ปัจจุบัน) → SD-WAN (อนาคต/ปัจจุบัน)\n\nไทย: CAT Telecom, NT (TOT), True Business, AIS Business เป็น MPLS providers หลัก",
+      table: {
+        header: ["WAN Technology", "ความเร็ว", "Latency", "ข้อดี", "ข้อเสีย"],
+        rows: [
+          ["Leased Line (E1/T1)", "2/1.5 Mbps", "ต่ำมาก", "Dedicated, predictable", "แพง, ช้า"],
+          ["MPLS L3 VPN", "10M - 10G", "ต่ำ-กลาง", "QoS, SLA, any-to-any", "แพง, ผูก ISP"],
+          ["MPLS L2 VPN", "1M - 10G", "ต่ำ", "Transparent L2", "แพง"],
+          ["IPsec VPN over Internet", "ขึ้นกับ Internet", "ปานกลาง", "ถูก, ยืดหยุ่น", "ไม่มี SLA, latency variable"],
+          ["SD-WAN", "ขึ้นกับ underlay", "ต่ำ (ปรับ path อัตโนมัติ)", "Multiple underlay, policy-based", "ซับซ้อนในการ setup"],
+        ],
+      },
+    },
+    {
+      title: "MPLS — Multi-Protocol Label Switching",
+      body: "MPLS เพิ่ม Label (32-bit) ระหว่าง L2 และ L3 header\n\nแทนที่จะ route ตาม IP (L3 lookup ทุก hop) — MPLS switch ตาม label (เร็วกว่า)\n\nLabel Stack:\n• Ingress PE: Push label\n• P (Provider) Router: Swap label\n• Egress PE: Pop label\n\nMPLS L3 VPN: แต่ละ customer มี VRF (Virtual Routing Table) แยกกัน → ป้องกัน customer เห็น route กัน",
+      code: `! MPLS Basic Config (บน Provider Router)
+mpls ip                           ! เปิด MPLS globally
+interface GigabitEthernet0/0
+ mpls ip                          ! เปิดบน interface
+
+! ดู MPLS
+show mpls interfaces              ! ดู interface ที่เปิด MPLS
+show mpls ldp neighbors           ! ดู LDP peers
+show mpls forwarding-table        ! ดู label table
+
+! VRF สำหรับ customer (บน PE router)
+vrf definition CUSTOMER_A
+ rd 65000:100                     ! Route Distinguisher
+ address-family ipv4
+  route-target import 65000:100
+  route-target export 65000:100
+
+interface GigabitEthernet0/1
+ vrf forwarding CUSTOMER_A
+ ip address 10.0.0.1 255.255.255.252`,
+      language: "cisco",
+    },
+    {
+      title: "SD-WAN — Software-Defined WAN",
+      body: "SD-WAN แยก Control Plane ออกจาก Data Plane — ควบคุม WAN policy ผ่าน centralized controller\n\nสถาปัตยกรรม Cisco SD-WAN (Viptela):\n• vManage: GUI/API controller\n• vSmart: ส่ง policy ไปยัง edge\n• vBond: orchestration / authentication\n• vEdge / cEdge: router ตามสาขา\n\nข้อดีหลัก:\n• รวม MPLS + Internet + 4G/5G เป็น underlay เดียว\n• App-aware routing: เลือก path ตาม application + latency\n• Zero-touch provisioning: plug-in แล้ว auto-configure\n• Central policy ผ่าน GUI ไม่ต้อง CLI ทุก router",
+      table: {
+        header: ["MPLS Traditional", "SD-WAN"],
+        rows: [
+          ["ผูกกับ ISP เดียว", "ใช้ได้หลาย ISP + 4G"],
+          ["Config ทีละ router", "Central policy ครั้งเดียว"],
+          ["ไม่มี app visibility", "เห็น app-level performance"],
+          ["SLA แพง", "Internet-grade + policy = คุ้มกว่า"],
+          ["Months to deploy", "Days/weeks"],
+        ],
+      },
+      tip: "SD-WAN ไม่ได้แทน MPLS ทุกกรณี — real-time VoIP ยังชอบ MPLS SLA; SD-WAN ดีสำหรับ cloud-first + multi-branch",
+    },
+  ],
   commands: [
     { command: "crypto isakmp policy 10\n encryption aes 256\n hash sha256\n authentication pre-share\n group 14", description: "IKEv1 Phase 1: AES-256, SHA-256, DH Group 14" },
     { command: "crypto ipsec transform-set TS esp-aes 256 esp-sha256-hmac", description: "IPsec Transform Set: AES-256 + SHA-256 HMAC" },
@@ -1308,6 +2078,56 @@ const wirelessBasic: Lesson = {
     "WPA3: SAE (Dragonfly), PMF mandatory, Forward Secrecy",
     "FlexConnect: AP switches locally — survives WAN outage",
     "RRM (Radio Resource Management): auto channel + power",
+  ],
+  sections: [
+    {
+      title: "802.11 Wireless Standards",
+      body: "Wi-Fi ใช้ IEEE 802.11 เป็น standard — แต่ละรุ่นเพิ่ม speed และ efficiency\n\nชื่อ Wi-Fi 4/5/6 เป็นชื่อ marketing ที่ Wi-Fi Alliance ตั้งให้จำง่ายขึ้น",
+      table: {
+        header: ["Standard", "Wi-Fi Gen", "Frequency", "Max Speed", "Feature หลัก"],
+        rows: [
+          ["802.11b", "-", "2.4 GHz", "11 Mbps", "รุ่นแรกที่ใช้กันแพร่หลาย"],
+          ["802.11g", "-", "2.4 GHz", "54 Mbps", "เร็วขึ้น, backward compat กับ b"],
+          ["802.11n", "Wi-Fi 4", "2.4/5 GHz", "600 Mbps", "MIMO (หลาย antenna)"],
+          ["802.11ac", "Wi-Fi 5", "5 GHz", "6.9 Gbps", "MU-MIMO, beamforming"],
+          ["802.11ax", "Wi-Fi 6/6E", "2.4/5/6 GHz", "9.6 Gbps", "OFDMA, BSS Coloring, Target Wake Time"],
+          ["802.11be", "Wi-Fi 7", "2.4/5/6 GHz", "46 Gbps", "Multi-Link Operation (MLO)"],
+        ],
+      },
+      tip: "2.4 GHz: range ไกล แต่แออัด (microwave, BT แย่ง), 5 GHz: เร็วกว่า range สั้นกว่า, 6 GHz (Wi-Fi 6E): ว่างที่สุด",
+    },
+    {
+      title: "Channel Planning — หลีกเลี่ยง Interference",
+      body: "2.4 GHz มีแค่ 3 channel ที่ไม่ overlap กัน: 1, 6, 11\n5 GHz มี 24+ non-overlapping channel (ขึ้นกับประเทศ)\n\nการวาง AP ใน enterprise ต้องวางแบบ honeycomb pattern และใช้ channel ที่ไม่ overlap ติดกัน",
+      code: `# ดู Wi-Fi environment บน Linux
+iwlist wlan0 scan | grep -E 'ESSID|Channel|Signal'
+iw dev wlan0 scan | grep -E 'SSID|freq|signal'
+
+# ดู channel ที่ใช้ทั้งหมดในพื้นที่
+sudo airmon-ng start wlan0
+sudo airodump-ng wlan0mon
+
+# Windows: ดู signal strength
+netsh wlan show interfaces
+netsh wlan show networks mode=bssid`,
+      language: "bash",
+      warning: "ถ้า AP ใกล้กันใช้ channel เดียวกัน = Co-channel Interference → throughput ลดมาก กำหนด channel ด้วยมือหรือใช้ Auto-RF บน WLC",
+    },
+    {
+      title: "WPA2 และ WPA3 Security",
+      body: "Wi-Fi Security วิวัฒนาการจาก WEP (แตกใน 5 นาที) → WPA → WPA2 → WPA3\n\nWPA2 Enterprise: ใช้ 802.1X + RADIUS server — ทุก user login ด้วย credential ของตัวเอง\nWPA2 Personal (PSK): ใช้ password ร่วมกัน — ถ้ารู้ password ก็ decrypt traffic ทุกคนได้\n\nWPA3 ปรับปรุง:\n• SAE (Simultaneous Authentication of Equals) แทน PSK: ป้องกัน offline dictionary attack\n• PMF (Protected Management Frames) บังคับ: ป้องกัน deauth attack\n• Forward Secrecy: ถึง password หลุด ก็ decrypt traffic เก่าไม่ได้",
+      table: {
+        header: ["Security", "Encryption", "Auth", "ช่องโหว่"],
+        rows: [
+          ["WEP", "RC4 (ไม่ปลอดภัย)", "Shared Key", "แตกภายใน 5 นาที — ห้ามใช้!"],
+          ["WPA", "TKIP", "PSK / 802.1X", "TKIP มีช่องโหว่"],
+          ["WPA2-Personal", "CCMP/AES", "PSK", "Dictionary attack บน PSK"],
+          ["WPA2-Enterprise", "CCMP/AES", "802.1X + RADIUS", "RADIUS server เป็น SPOF"],
+          ["WPA3-Personal", "CCMP/AES + SAE", "SAE (Dragonfly)", "ปลอดภัยกว่า PSK มาก"],
+          ["WPA3-Enterprise", "GCMP-256", "802.1X + RADIUS", "ปลอดภัยที่สุด"],
+        ],
+      },
+    },
   ],
   commands: [
     { command: "show ap summary", description: "แสดง AP ทั้งหมดที่ join WLC" },
@@ -1393,6 +2213,90 @@ const monitoringBasic: Lesson = {
     "Flow data: who→who, how much, when — ไม่บอก content",
     "Prometheus + SNMP Exporter + Grafana = modern monitoring stack",
     "IP SLA: active monitoring probe สำหรับ latency/jitter measurement",
+  ],
+  sections: [
+    {
+      title: "SNMP — Simple Network Management Protocol",
+      body: "SNMP ใช้ monitor และ manage อุปกรณ์เครือข่าย (router, switch, server) จาก central NMS\n\nComponent:\n• Agent: software บนอุปกรณ์ ตอบคำถามและส่ง trap\n• NMS (Network Management System): เก็บข้อมูล, alert (Zabbix, Nagios, PRTG, LibreNMS)\n• MIB (Management Information Base): catalog ของ OID ที่ agent รู้จัก",
+      table: {
+        header: ["SNMP Version", "Security", "Port", "แนะนำ"],
+        rows: [
+          ["v1", "Community string (plaintext)", "UDP 161/162", "❌ ไม่ปลอดภัย"],
+          ["v2c", "Community string (plaintext)", "UDP 161/162", "ยังใช้อยู่ถ้า network trusted"],
+          ["v3", "USM: Auth (SHA) + Priv (AES)", "UDP 161/162", "✅ แนะนำ — encrypt"],
+        ],
+      },
+      code: `! Cisco: SNMP v2c configuration
+snmp-server community MONITOR-RO ro    ! read-only community
+snmp-server host 10.0.0.100 version 2c MONITOR-RO
+
+! SNMP v3 (ปลอดภัยกว่า)
+snmp-server group NETOPS v3 priv
+snmp-server user monitor NETOPS v3 auth sha AuthPass123 priv aes 128 PrivPass456
+snmp-server host 10.0.0.100 version 3 priv monitor
+
+! Linux: ดึงข้อมูลด้วย snmpget
+snmpget -v2c -c MONITOR-RO 192.168.1.1 sysDescr.0
+snmpwalk -v2c -c MONITOR-RO 192.168.1.1 ifTable    ! ดู interface stats`,
+      language: "cisco",
+      warning: "SNMP v1/v2c ส่ง community string แบบ plaintext — ใช้ SNMP v3 หรือจำกัด access ด้วย ACL",
+    },
+    {
+      title: "NetFlow — Traffic Analysis",
+      body: "NetFlow บันทึกข้อมูล flow (session) ของ traffic ทุก connection:\n• Who: src/dst IP\n• What: protocol, port\n• How much: bytes, packets\n• When: start/end time\n\nไม่บันทึก content ของ packet (ไม่ใช่ packet capture)\nใช้หาว่า host ไหน consume bandwidth มากที่สุด, detect DDoS, audit\n\nVersions: v5 (IPv4 only), v9 (template-based, IPv6), IPFIX (IETF standard, แนะนำ)",
+      code: `! Cisco: เปิด NetFlow บน interface
+interface GigabitEthernet0/0
+ ip flow ingress
+ ip flow egress
+
+! กำหนด NetFlow exporter (ส่งไปยัง collector)
+ip flow-export version 9
+ip flow-export destination 10.0.0.50 9995    ! Collector IP + UDP port
+ip flow-export source GigabitEthernet0/0
+
+! ดู NetFlow cache
+show ip cache flow
+show ip flow interface
+
+! Tools: ntopng, nfdump, Elastic + Kibana, SolarWinds NTA
+# nfdump: วิเคราะห์ NetFlow files
+nfdump -r /data/flows/nfcapd.current -s ip/bytes -n 10    ! top 10 talkers`,
+      language: "cisco",
+    },
+    {
+      title: "Syslog — Centralized Log Management",
+      body: "Syslog รวบรวม log จากอุปกรณ์ทั้ง network มาไว้ที่ centralized server\n\nSyslog Severity Levels (0 = วิกฤต, 7 = debug):",
+      table: {
+        header: ["Level", "Keyword", "ความหมาย", "ตัวอย่าง"],
+        rows: [
+          ["0", "Emergency (emerg)", "System unusable", "Power failure, hardware crash"],
+          ["1", "Alert", "Immediate action needed", "Disk 95% full, link down on critical router"],
+          ["2", "Critical", "Critical conditions", "Software error, redundancy failed"],
+          ["3", "Error", "Error conditions", "Interface error, OSPF neighbor lost"],
+          ["4", "Warning", "Warning conditions", "CPU >80%, memory low"],
+          ["5", "Notice", "Normal but significant", "Config change, user login"],
+          ["6", "Info", "Informational", "Link up/down, ACL match"],
+          ["7", "Debug", "Debug messages", "Packet-level tracing"],
+        ],
+      },
+      code: `! Cisco: ส่ง log ไปยัง syslog server
+logging host 10.0.0.200
+logging trap informational    ! ส่ง level 0-6
+logging source-interface Loopback0
+logging on
+
+! Linux rsyslog: forward ไปยัง central
+echo "*.* @10.0.0.200:514" >> /etc/rsyslog.conf    ! UDP
+echo "*.* @@10.0.0.200:514" >> /etc/rsyslog.conf   ! TCP
+
+! ELK Stack (Elasticsearch + Logstash + Kibana): popular open-source log platform
+# Logstash config รับ syslog
+input { syslog { port => 5140 } }
+filter { grok { match => { "message" => "%{SYSLOGLINE}" } } }
+output { elasticsearch { hosts => ["localhost:9200"] } }`,
+      language: "cisco",
+      tip: "Production ส่ง syslog level 0-5 (ไม่ส่ง debug 6-7) — debug flood disk และ network bandwidth",
+    },
   ],
   commands: [
     { command: "snmp-server community PUBLIC ro", description: "ตั้ง SNMP v2c read-only community" },
@@ -1483,6 +2387,73 @@ const troubleshootingBasic: Lesson = {
     "debug ip icmp / undebug all — ใช้ระวัง production",
     "show tech-support — รวม output ส่ง TAC",
   ],
+  sections: [
+    {
+      title: "Systematic Troubleshooting Approach",
+      body: "การ troubleshoot แบบสุ่ม waste เวลามาก — ต้องมี methodology:\n\n1. Define the problem: ปัญหาคืออะไรกันแน่? เกิดเมื่อไหร่? กระทบใคร?\n2. Gather info: show commands, logs, user report\n3. Form hypothesis: คิดว่า cause คืออะไร\n4. Test hypothesis: verify หรือ disprove\n5. ONE change at a time: เปลี่ยนทีละอย่าง แล้ว test\n6. Document: บันทึกทุกอย่างที่ทำ\n\nวิธีเลือก approach:\n• Bottom-Up: ถ้าไม่รู้ว่าปัญหาอยู่ Layer ไหน → เริ่ม L1\n• Top-Down: ถ้า user report ปัญหา application → เริ่ม L7\n• Divide & Conquer: ถ้ามีประสบการณ์ → เริ่ม L3 แล้วแยกขึ้น/ลง",
+      table: {
+        header: ["Approach", "เริ่มที่", "เหมาะกับ"],
+        rows: [
+          ["Bottom-Up", "L1 (Physical)", "ไม่รู้ layer ที่มีปัญหา, ปัญหาใหม่"],
+          ["Top-Down", "L7 (Application)", "User report app error, ทราบ physical ok"],
+          ["Divide & Conquer", "L3 (ping test)", "มีประสบการณ์, ต้องการเร็ว"],
+          ["Follow the Path", "Trace path packet", "ปัญหา routing, WAN"],
+          ["Spot the Differences", "เปรียบ working vs broken", "เกิดหลัง change"],
+        ],
+      },
+    },
+    {
+      title: "Layer-by-Layer Diagnostic Commands",
+      body: "ตรวจสอบทีละ Layer — พอเจอ layer ที่ผิดปกติ concentrate ที่นั้น:",
+      code: `# ── L1: Physical ──────────────────────────────
+show interfaces GigabitEthernet0/0    # ดู Input/Output errors, CRC, runts, giants
+# CRC errors → bad cable / duplex mismatch
+# Runts → frame < 64 bytes (duplex mismatch หรือ collision)
+# Input errors + no CRC → duplex mismatch
+
+# ── L2: Data Link ──────────────────────────────
+show mac address-table               # MAC table
+show interfaces trunk                # trunk ports, VLANs allowed
+show spanning-tree vlan 10           # STP state
+show cdp neighbors detail            # ดู connected devices
+
+# ── L3: Network ────────────────────────────────
+ping 192.168.1.1                     # test connectivity
+ping 192.168.1.1 source Lo0 repeat 100 size 1500 df-bit  # test MTU
+traceroute 8.8.8.8                   # ดู path + latency per hop
+show ip route                        # routing table
+show ip arp                          # ARP table
+
+# ── L4: Transport ──────────────────────────────
+telnet 10.0.0.1 80                   # test TCP port
+nc -zv 10.0.0.1 443                  # netcat port test
+ss -tlnp                             # ดู listening ports (Linux)
+netstat -an | grep ESTABLISHED       # ดู active connections
+
+# ── L7: Application ────────────────────────────
+curl -v https://www.example.com      # HTTP debug
+openssl s_client -connect host:443   # SSL/TLS debug
+nslookup www.example.com             # DNS test`,
+      language: "bash",
+    },
+    {
+      title: "Common Network Issues และวิธีแก้",
+      body: "เก็บ pattern ของปัญหาที่เจอบ่อย:",
+      table: {
+        header: ["อาการ", "สาเหตุที่เป็นไปได้", "วิธีตรวจ"],
+        rows: [
+          ["ping ไม่ผ่านเลย", "L1: cable/interface down", "show interfaces — ดู line/protocol"],
+          ["ping ผ่าน gateway แต่ไม่ถึง remote", "Routing หาย, ACL block", "show ip route, traceroute"],
+          ["ping ผ่านแต่ TCP ไม่ได้", "Firewall block port, MTU issue", "telnet <ip> <port>, ping df-bit"],
+          ["เน็ตช้า intermittent", "Duplex mismatch, congestion, lossy link", "show interface (errors), ping จำนวนมาก"],
+          ["DNS ไม่ทำงาน", "DNS server ไม่ตอบ, wrong DNS IP", "nslookup google.com, ping DNS IP"],
+          ["DHCP ไม่ได้ IP", "DHCP server down, helper-address หาย", "ipconfig /renew, show ip dhcp binding"],
+          ["OSPF neighbor ไม่ขึ้น", "Hello mismatch, MTU mismatch, network type", "show ip ospf neighbor, debug ip ospf"],
+        ],
+      },
+      tip: "Rule #1: เปลี่ยนทีละอย่าง แล้ว test ก่อน เปลี่ยนต่อ — ถ้าเปลี่ยนหลายอย่างพร้อมกัน ไม่รู้ว่าอะไรแก้ได้",
+    },
+  ],
   commands: [
     { command: "ping <ip> repeat 100 size 1472 df-bit", description: "Test MTU path (1472+28=1500 byte)" },
     { command: "traceroute <ip> source <interface> probe 5", description: "Traceroute จาก source specific" },
@@ -1570,6 +2541,78 @@ const documentationBasic: Lesson = {
     "IOS Archive: track config changes with who/when/what",
     "Change Management: RFC → Peer Review → Approval → MW → Verify → Rollback → Document",
     "Config drift: compare running config vs Git golden config daily",
+  ],
+  sections: [
+    {
+      title: "ทำไม Network Documentation ถึงสำคัญ?",
+      body: "Network ที่ดีต้องมี documentation ที่ดี — ถ้าไม่มี:\n• Engineer ใหม่ใช้เวลาหลายสัปดาห์ทำความเข้าใจ network\n• Troubleshoot นานขึ้น เพราะไม่รู้ว่า cable ไปไหน\n• Change ผิดพลาดบ่อยขึ้น เพราะไม่รู้ impact\n\nRule of thumb: ถ้า engineer คนสำคัญหายไปพรุ่งนี้ ทีมยังเดินงานต่อได้ไหม?\n→ ถ้าไม่ได้ = documentation ไม่พอ",
+      table: {
+        header: ["Document Type", "มีอะไร", "Tool"],
+        rows: [
+          ["L1 Physical Diagram", "rack, cable, port, label", "Visio, draw.io"],
+          ["L2 Logical Diagram", "VLAN, trunk, STP root, switch port", "Visio, draw.io, NetBox"],
+          ["L3 Network Diagram", "IP subnet, routing protocol, WAN", "Visio, Lucidchart"],
+          ["IP Address Management (IPAM)", "IP allocation, DNS, DHCP scope", "NetBox, phpIPAM, Excel"],
+          ["Change Log", "who/what/when/why changed", "ServiceNow, Jira, Wiki"],
+          ["Runbook / SOP", "step-by-step procedures", "Confluence, Notion"],
+        ],
+      },
+    },
+    {
+      title: "IPAM — IP Address Management",
+      body: "IPAM (IP Address Management) ติดตาม IP address ทุกตัวในองค์กร:\n\nปัญหาถ้าไม่มี IPAM:\n• IP conflict — 2 device ใช้ IP เดียวกัน\n• ไม่รู้ว่า subnet ไหนเต็มแล้ว\n• เอา IP ที่ใช้อยู่ไป assign ให้ device ใหม่\n\nBest Practice — Hierarchical IP Plan:\n• 10.0.0.0/8 = ทั้งองค์กร\n• 10.SITE.0.0/16 = แต่ละ site (max 256 sites)\n• 10.SITE.VLAN.0/24 = แต่ละ VLAN ต่อ site",
+      table: {
+        header: ["Subnet", "ใช้กับ", "หมายเหตุ"],
+        rows: [
+          ["10.1.0.0/24", "BKK Site — Server VLAN", "VLAN 10"],
+          ["10.1.10.0/24", "BKK Site — IT VLAN", "VLAN 20"],
+          ["10.1.20.0/24", "BKK Site — HR VLAN", "VLAN 30"],
+          ["10.1.254.0/30", "BKK-CNX WAN link", "point-to-point"],
+          ["10.2.0.0/16", "CNX Site", "เหมือนกัน แต่ site 2"],
+        ],
+      },
+      code: `# NetBox — open-source DCIM + IPAM (Docker install)
+docker run -d -p 8000:8000 netboxcommunity/netbox:latest
+
+# NetBox API: สร้าง prefix ด้วย Python
+import requests
+headers = {"Authorization": "Token YOUR_TOKEN", "Content-Type": "application/json"}
+data = {"prefix": "10.1.10.0/24", "description": "BKK IT VLAN", "site": 1, "vlan": 20}
+r = requests.post("http://netbox/api/ipam/prefixes/", json=data, headers=headers)
+
+# ดู IP ที่ว่างใน prefix
+r = requests.get("http://netbox/api/ipam/prefixes/5/available-ips/", headers=headers)
+print(r.json())`,
+      language: "python",
+    },
+    {
+      title: "Configuration Backup และ Change Management",
+      body: "Backup config ทุก device ก่อน change — ถ้า change ผิด rollback ได้ใน 30 วินาที\n\nIOS Archive (Cisco): เก็บ config เก่าพร้อม timestamp ใน flash หรือ TFTP server\n\nChange Management Process:\n1. Change Request: อธิบาย what/why/impact/rollback plan\n2. Change Approval: ผ่าน CAB (Change Advisory Board)\n3. Maintenance Window: change ในเวลา low-traffic\n4. Test: verify หลัง change\n5. Document: update diagram + IPAM",
+      code: `! Cisco IOS Archive — auto backup ทุกครั้ง config เปลี่ยน
+archive
+ path tftp://10.0.0.50/configs/$h-$t    ! $h=hostname, $t=timestamp
+ write-memory
+ time-period 1440    ! backup ทุก 24 ชม.
+
+! Show config history
+show archive
+archive config
+
+! Ansible: backup config ทุก router อัตโนมัติ
+# playbook backup_configs.yml
+- name: Backup Cisco IOS configs
+  hosts: routers
+  gather_facts: false
+  tasks:
+    - name: Backup running config
+      cisco.ios.ios_config:
+        backup: yes
+        backup_options:
+          filename: "{{ inventory_hostname }}_{{ lookup('pipe', 'date +%Y%m%d') }}.cfg"
+          dir_path: /backups/`,
+      language: "cisco",
+      tip: "3-2-1 Backup Rule: 3 copies, 2 media types, 1 offsite — ใช้ได้กับ network config เช่นกัน",
+    },
   ],
   commands: [
     { command: "copy running-config scp://admin@192.168.1.10/backup/R1.cfg", description: "Backup config ผ่าน SCP (encrypted)" },

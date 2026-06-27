@@ -25,6 +25,40 @@ const aiInfraOverview: Lesson = {
     "อธิบายความแตกต่างระหว่าง Training vs Inference Network Requirements",
     "ระบุ Key Technologies: RDMA, RoCE, InfiniBand",
   ],
+  sections: [
+    {
+      title: "AI Training vs Inference: Network Requirements ต่างกันอย่างไร",
+      body: "AI Training ใช้ Network แบบ All-to-All Communication — GPU ทุกตัวต้องคุยกันระหว่าง backward pass (AllReduce). ถ้า bandwidth ต่ำหรือ latency สูงแม้แค่ GPU เดียว ทั้ง cluster จะช้าตามเพราะ synchronization barrier\n\nAI Inference ต่างออกไป — traffic เป็น Client→Server, bandwidth ต่ำกว่า แต่ latency ต้องสม่ำเสมอ (P99 latency) เพราะ end-user กำลังรอ response",
+      table: {
+        header: ["ด้าน", "Training", "Inference"],
+        rows: [
+          ["Traffic Pattern", "All-to-All (AllReduce)", "Client→Server"],
+          ["Bandwidth", "400GbE–3.2Tbps/GPU", "10–100GbE"],
+          ["Latency Sensitivity", "ต่ำมาก (μs level)", "ปานกลาง (ms level)"],
+          ["Bottleneck", "GPU-to-GPU bandwidth", "CPU throughput / memory"],
+          ["Protocol", "RoCE / InfiniBand", "TCP/IP ปกติ"],
+        ],
+      },
+    },
+    {
+      title: "East-West Traffic และ Non-Blocking Fabric",
+      body: "ใน AI Cluster, GPU อยู่ใน Rack หลาย Rack — traffic ส่วนใหญ่วิ่ง East-West (server-to-server) ไม่ใช่ North-South (server-to-internet). Switch Fabric ต้องเป็น Non-Blocking หมายความว่าถ้า 64 ports ต่างส่งพร้อมกัน ทุก port ยังได้ full bandwidth\n\nสถาปัตยกรรมทั่วไปคือ Fat-Tree หรือ Clos Network — มี Spine Layer, Leaf Layer และ Oversubscription ratio ต้องเป็น 1:1 สำหรับ training cluster",
+      tip: "Rule of thumb: Training cluster ต้องการ ~1 Gbps per GPU TFLOP. A100 GPU (312 TFLOPS) → ~312 Gbps per GPU — นี่คือเหตุผลที่ InfiniBand/RoCE ต้องใช้ 400GbE",
+    },
+    {
+      title: "Key Technologies: RDMA, RoCE, InfiniBand",
+      body: "RDMA (Remote Direct Memory Access) ให้ GPU หนึ่งอ่าน/เขียน memory ของ GPU อีกเครื่องโดยตรงโดยไม่ผ่าน CPU — ลด latency จาก ~100μs (TCP) เหลือ ~1μs\n\nRoCE (RDMA over Converged Ethernet) ทำงานบน Ethernet ปกติ แต่ต้องการ Lossless Network (PFC + ECN). InfiniBand เป็น proprietary fabric จาก NVIDIA/Mellanox — performance สูงกว่าแต่ราคาแพงกว่ามาก",
+      table: {
+        header: ["Technology", "Latency", "Bandwidth", "Cost", "Use Case"],
+        rows: [
+          ["TCP/IP Ethernet", "~100μs", "100GbE", "ต่ำ", "Inference"],
+          ["RoCEv2", "~2-5μs", "400GbE", "ปานกลาง", "Training (Hyperscale)"],
+          ["InfiniBand NDR", "~0.6μs", "400Gbps", "สูงมาก", "HPC / Large Training"],
+        ],
+      },
+      warning: "RoCE ต้องการ Lossless Ethernet — ถ้า Switch ไม่รองรับ PFC (Priority Flow Control) จะเกิด packet drop และ RDMA performance จะแย่กว่า TCP",
+    },
+  ],
   prerequisites: ["ospf", "vlan"],
   concepts: ["GPU Cluster", "Training vs Inference", "East-West Traffic", "RDMA", "RoCE", "InfiniBand", "Low Latency", "High Throughput", "AllReduce", "NCCL", "Non-blocking Fabric"],
   mermaidDiagram: `graph TB
@@ -113,6 +147,47 @@ const rdmaRoce: Lesson = {
     "Config Lossless Ethernet + PFC สำหรับ RoCE",
     "ใช้ ECN/DCQCN สำหรับ Congestion Control",
   ],
+  sections: [
+    {
+      title: "RDMA คืออะไร และทำไม Network Engineer ต้องรู้",
+      body: "RDMA (Remote Direct Memory Access) ทำให้ application หนึ่งสามารถอ่าน/เขียน memory ของ host อีกเครื่องโดยตรง ไม่ผ่าน CPU และ OS kernel — ลด latency และ CPU overhead ลงอย่างมาก\n\nใน AI/HPC workload, AllReduce operation ต้องแลกเปลี่ยน gradient ระหว่าง GPU หลายพันตัว. RDMA ทำให้ operation นี้เร็วมากพอที่ GPU จะไม่ต้องรอ network",
+      table: {
+        header: ["ด้าน", "Traditional TCP/IP", "RDMA"],
+        rows: [
+          ["Data Path", "App → OS → NIC → Network", "App → NIC → Network (bypass OS)"],
+          ["CPU Involvement", "สูง (copy, interrupt)", "แทบไม่มี (zero-copy)"],
+          ["Latency", "~50-100μs", "~1-5μs"],
+          ["Throughput", "Limited by CPU", "Near wire-speed"],
+        ],
+      },
+    },
+    {
+      title: "RoCEv2: RDMA บน Ethernet",
+      body: "RoCEv2 (RDMA over Converged Ethernet version 2) encapsulate RDMA packets ใน UDP/IP — ทำให้ routable ข้าม subnet ได้ (ต่างจาก RoCEv1 ที่จำกัดอยู่ใน L2 domain)\n\nข้อกำหนดสำคัญ: Network ต้องเป็น Lossless — packet drop หนึ่งใบทำให้ RDMA connection ต้อง retransmit ทั้ง message ซึ่งกระทบ latency มาก",
+      code: `# ตรวจสอบ RoCE counters บน Linux
+rdma stat show
+ibstat | grep -A5 "Port 1"
+
+# ตรวจสอบ PFC frames บน switch (Cisco Nexus)
+show interface ethernet 1/1 priority-flow-control
+show queuing interface ethernet 1/1`,
+      language: "bash",
+      tip: "ECN (Explicit Congestion Notification) ใช้คู่กับ PFC — ECN signal ให้ sender ลด rate ก่อนที่ queue จะเต็ม ลดโอกาส PFC pause frame",
+    },
+    {
+      title: "Lossless Network: PFC และ ECN Configuration",
+      body: "PFC (Priority Flow Control) — ถ้า queue ใกล้เต็ม switch จะส่ง PAUSE frame ให้ sender หยุดส่งชั่วคราว สำหรับ traffic class ที่กำหนด (CoS 3 สำหรับ RoCE โดยทั่วไป)\n\nECN marking ทำงานบน router/switch — เมื่อ buffer usage เกิน threshold จะ mark CE bit ใน IP header แทนการ drop packet sender จะลด congestion window ลง",
+      table: {
+        header: ["Mechanism", "Layer", "Action", "ผลต่อ Latency"],
+        rows: [
+          ["PFC Pause", "L2", "หยุด sender ชั่วคราว", "spike latency"],
+          ["ECN", "L3", "บอก sender ให้ช้าลง", "smooth, predictable"],
+          ["DCQCN", "End-to-End", "ผสม ECN + rate control", "ดีที่สุด"],
+        ],
+      },
+      warning: "PFC Pause ถ้า misconfigured อาจเกิด PFC Deadlock — traffic หยุดทั้ง fabric. ต้องวางแผน traffic class และ priority mapping ให้ถูกต้อง",
+    },
+  ],
   prerequisites: ["ai-infrastructure-overview"],
   concepts: ["RDMA", "RNIC", "RDMA NIC", "RoCE v1", "RoCE v2", "Lossless Ethernet", "PFC", "ECN", "DCQCN", "Congestion Control", "PAUSE Frame", "CoS", "DSCP"],
   mermaidDiagram: `sequenceDiagram
@@ -186,6 +261,49 @@ const k8sNetworking: Lesson = {
     "เข้าใจ Pod-to-Pod, Pod-to-Service, External Traffic Flow",
     "อธิบาย CNI Plugin ทำอะไร",
     "เขียน NetworkPolicy เบื้องต้นได้",
+  ],
+  sections: [
+    {
+      title: "Kubernetes Networking Model: 4 Problems, 1 Solution",
+      body: "K8s กำหนด Networking Model ไว้ 4 ข้อ: (1) Pod คุยกับ Pod ได้โดยตรงโดยไม่ต้องทำ NAT (2) Node คุยกับ Pod ได้ (3) Pod ได้ IP ของตัวเองที่ unique ใน cluster (4) Service ใช้ ClusterIP เป็น Virtual IP\n\nทุกข้อนี้ CNI Plugin เป็นตัวทำให้เป็นจริง — K8s เอง (kubelet) เพียงเรียก CNI binary ตอน Pod ถูก schedule มายัง Node",
+      table: {
+        header: ["Component", "หน้าที่", "ตัวอย่าง"],
+        rows: [
+          ["CNI Plugin", "จัด IP ให้ Pod, สร้าง veth pair", "Calico, Cilium, Flannel"],
+          ["kube-proxy", "จัดการ Service iptables/ipvs", "built-in DaemonSet"],
+          ["CoreDNS", "DNS resolution ภายใน cluster", "svc.cluster.local"],
+          ["Ingress Controller", "L7 routing, TLS termination", "nginx, traefik"],
+        ],
+      },
+    },
+    {
+      title: "Pod Networking: veth pair และ CNI",
+      body: "ทุก Pod ได้รับ Network Namespace ของตัวเอง — มี lo + eth0 interface. eth0 ใน Pod ต่อกับ veth pair ที่ออกมายัง host network namespace\n\nCNI Plugin รับผิดชอบ: สร้าง veth pair, assign IP จาก Pod CIDR, เพิ่ม route ให้ traffic ออก Pod ได้, และตั้ง policy ถ้า Network Policy ถูก apply",
+      code: `# ดู network namespace ของ Pod
+kubectl exec -it mypod -- ip addr
+kubectl exec -it mypod -- ip route
+
+# บน node ดู veth pair
+ip link show type veth
+# หา veth ที่เชื่อมกับ pod
+nsenter -t <pod-pid> -n ip addr`,
+      language: "bash",
+      tip: "Pod IP มาจาก podCIDR ที่ assign ให้แต่ละ Node — เช่น Node 1 ได้ 10.244.0.0/24, Node 2 ได้ 10.244.1.0/24. Pod บน Node 1 จะได้ IP ในช่วง 10.244.0.x",
+    },
+    {
+      title: "Service Networking: ClusterIP, NodePort, LoadBalancer",
+      body: "Service เป็น Virtual IP (ClusterIP) ที่ kube-proxy map ไปยัง Endpoints (Pod IPs) จริงๆ — ทำผ่าน iptables DNAT หรือ IPVS\n\nNodePort เปิด port บน ทุก Node ใน cluster — traffic เข้า NodeIP:NodePort จะถูก forward ไปยัง Service. LoadBalancer ขอ Cloud LB จาก provider มา point ไปที่ NodePort",
+      table: {
+        header: ["Service Type", "Access", "Use Case"],
+        rows: [
+          ["ClusterIP", "ภายใน cluster เท่านั้น", "inter-service communication"],
+          ["NodePort", "NodeIP:Port จาก outside", "dev/test environments"],
+          ["LoadBalancer", "Cloud LB IP", "production external traffic"],
+          ["ExternalName", "DNS CNAME", "external service alias"],
+        ],
+      },
+      warning: "kube-proxy iptables mode — ถ้า Service มี Endpoints มากกว่า 1000 ตัว iptables rules จะมีผลต่อ performance. พิจารณา IPVS mode หรือ eBPF-based (Cilium)",
+    },
   ],
   prerequisites: ["ai-infrastructure-overview"],
   concepts: ["Pod IP", "Node IP", "Cluster IP", "Service IP", "CoreDNS", "kube-proxy", "CNI", "NetworkPolicy", "ClusterIP", "NodePort", "LoadBalancer", "Ingress"],
@@ -296,6 +414,40 @@ const wifi7: Lesson = {
     "อธิบาย Multi-Link Operation (MLO) ทำงานอย่างไร",
     "ออกแบบ Enterprise Wi-Fi 7 Deployment ได้",
   ],
+  sections: [
+    {
+      title: "WiFi 7 (802.11be) — Multi-Link Operation (MLO)",
+      body: "WiFi 7 ฟีเจอร์ใหม่ที่สำคัญที่สุดคือ MLO (Multi-Link Operation) — device สามารถส่งและรับข้อมูลบนหลาย band พร้อมกัน (2.4GHz + 5GHz + 6GHz) ใน single connection เดียว\n\nผลคือ throughput สูงขึ้น (รวม bandwidth จากหลาย band) และ latency ต่ำลง (ถ้า band หนึ่ง congested ส่งอีก band แทนได้ทันที)",
+      table: {
+        header: ["WiFi Generation", "Standard", "Max Speed", "ฟีเจอร์ใหม่"],
+        rows: [
+          ["WiFi 5", "802.11ac", "3.5 Gbps", "MU-MIMO (DL only)"],
+          ["WiFi 6", "802.11ax", "9.6 Gbps", "OFDMA, BSS Coloring, TWT"],
+          ["WiFi 6E", "802.11ax", "9.6 Gbps", "6GHz band เพิ่มเติม"],
+          ["WiFi 7", "802.11be", "46 Gbps", "MLO, 4096-QAM, 320MHz"],
+        ],
+      },
+    },
+    {
+      title: "4096-QAM และ 320MHz Channel Width",
+      body: "WiFi 7 เพิ่ม modulation เป็น 4096-QAM (4K-QAM) — แต่ละ symbol ส่งข้อมูล 12 bits (เทียบกับ 1024-QAM ใน WiFi 6 ที่ส่ง 10 bits) เพิ่ม theoretical throughput ขึ้น ~20%\n\n320MHz channel width (เป็น 2 เท่าของ WiFi 6 ที่ 160MHz) ทำได้บน 6GHz band เท่านั้น — ต้องมี spectrum ที่สะอาดและ client อยู่ใกล้ AP (เพราะ SNR ต้องสูงมากสำหรับ 4K-QAM)",
+      tip: "WiFi 7 ยังรองรับ Punctured Channel — ถ้ามี interference บางส่วนของ 320MHz channel สามารถ 'เจาะรู' ส่วนนั้นออกได้ แล้วใช้ส่วนที่เหลือแทน (แทนที่จะ fallback ทั้ง channel)",
+    },
+    {
+      title: "Enterprise Deployment: WiFi 7 Readiness",
+      body: "การ deploy WiFi 7 ใน enterprise ต้องคิดถึง: (1) Wired backhaul — AP ต้องการ 2.5G หรือ 5G/10G uplink เพราะ throughput สูงกว่า 1GbE (2) PoE budget — WiFi 7 AP กินไฟ ~25-30W ต้องการ PoE++ (802.3bt) (3) Client device support — WiFi 7 NIC ยังมีไม่มากใน 2024-2025",
+      table: {
+        header: ["ความต้องการ", "WiFi 6", "WiFi 7"],
+        rows: [
+          ["Wired Uplink", "1GbE ก็พอ", "2.5G/5G/10G แนะนำ"],
+          ["PoE", "PoE+ (802.3at) ~15-25W", "PoE++ (802.3bt) ~30W"],
+          ["6GHz Support", "6E เท่านั้น", "ต้องการ"],
+          ["Client Support", "Widespread", "Growing (2024+)"],
+        ],
+      },
+      warning: "6GHz band ใน WiFi 7 มีกฎระเบียบแตกต่างกันแต่ละประเทศ — ในบางประเทศยังไม่ได้รับอนุญาต. ตรวจสอบ regulatory domain ก่อน deploy",
+    },
+  ],
   prerequisites: [],
   concepts: ["Wi-Fi 7", "802.11be", "MLO", "320 MHz", "4096-QAM", "Multi-RU", "6 GHz", "Preamble Puncturing", "OFDMA", "MU-MIMO", "WPA3"],
   mermaidDiagram: `graph LR
@@ -364,6 +516,46 @@ const saseLesson: Lesson = {
     "ระบุ Use Case สำหรับ ZTNA vs Traditional VPN",
     "ออกแบบ SASE Migration Plan ได้",
     "เข้าใจ Zero Trust Principles",
+  ],
+  sections: [
+    {
+      title: "SASE Architecture: Security + Networking = Cloud-delivered",
+      body: "SASE (Secure Access Service Edge) รวม SD-WAN กับ Security Services ไว้ใน cloud platform เดียว — แทนที่จะให้ traffic วิ่งผ่าน datacenter เพื่อ security inspection ก่อน, SASE ทำ inspection ที่ Cloud PoP ใกล้ผู้ใช้\n\nFramework ประกอบด้วย: SD-WAN (transport), CASB (Cloud Access Security Broker), SWG (Secure Web Gateway), ZTNA (Zero Trust Network Access), FWaaS (Firewall as a Service)",
+      table: {
+        header: ["Component", "หน้าที่", "แทนที่อะไร"],
+        rows: [
+          ["SD-WAN", "Intelligent path selection", "MPLS / traditional WAN"],
+          ["ZTNA", "Per-app access control", "VPN"],
+          ["SWG", "Web/internet policy enforcement", "Proxy server"],
+          ["CASB", "Cloud app visibility & control", "On-prem DLP"],
+          ["FWaaS", "L7 firewall in cloud", "Branch firewall"],
+        ],
+      },
+    },
+    {
+      title: "Zero Trust Network Access (ZTNA): ทำงานอย่างไร",
+      body: "ZTNA ทำงานบนหลักการ 'Never Trust, Always Verify' — แทนที่จะให้ access ทั้ง network หลัง authenticate (แบบ VPN), ZTNA ให้ access เฉพาะ application ที่ได้รับอนุญาตเท่านั้น\n\nUser authenticate กับ Identity Provider (IdP) → ZTNA Controller ตรวจสอบ identity + device posture → ออก short-lived token สำหรับ access เฉพาะ app → traffic ผ่าน ZTNA broker ไปยัง app โดยไม่เปิด network ให้ user เห็น",
+      tip: "ZTNA แก้ปัญหา VPN ที่ให้ access มากเกินไป — ถ้า VPN credential ถูก compromise, attacker ได้ access ทั้ง network. ZTNA จำกัดให้เฉพาะ app ที่ authorized",
+    },
+    {
+      title: "SD-WAN Integration และ Intelligent Path Selection",
+      body: "SD-WAN ใน SASE ทำ real-time measurement ของ WAN links (MPLS, Broadband, LTE, 5G) และเลือก path ที่ดีที่สุดสำหรับแต่ละ application\n\nBusiness Policy กำหนดว่า Video Conferencing ต้องใช้ path ที่ jitter < 20ms, Backup ใช้ path ราคาถูก, Critical apps ใช้ MPLS เป็น primary. SD-WAN appliance วัด SLA แบบ real-time และ failover อัตโนมัติ",
+      code: `# Versa SASE — ตัวอย่าง application policy
+application-policy {
+  rule "video-conferencing" {
+    match { application [zoom teams webex]; }
+    action { 
+      path-preference [mpls broadband]; 
+      sla-profile { latency 50; jitter 20; loss 1; }
+    }
+  }
+  rule "backup-traffic" {
+    match { application [s3-backup ftp]; }
+    action { path-preference [lte broadband mpls]; }
+  }
+}`,
+      language: "text",
+    },
   ],
   prerequisites: [],
   concepts: ["SASE", "SD-WAN", "SWG", "CASB", "ZTNA", "FWaaS", "DLP", "RBI", "Zero Trust", "Cloud Security POP", "Identity-based Access", "Device Posture"],
@@ -444,6 +636,62 @@ const cniDeepDive: Lesson = {
     "เข้าใจ Calico BGP Routing Mode vs VXLAN Mode",
     "อธิบาย Cilium eBPF Data Plane และข้อดี",
     "เลือก CNI Plugin ได้ถูกต้องตาม Use Case",
+  ],
+  sections: [
+    {
+      title: "CNI Fundamentals: Calico vs Cilium Architecture",
+      body: "Calico ใช้ BGP-based routing — แต่ละ Node run BGP speaker (BIRD daemon) และ advertise Pod CIDR ของตัวเองไปยัง Node อื่น. Packet routing ใช้ Linux kernel routing table + iptables/ipsets สำหรับ Network Policy\n\nCilium ใช้ eBPF — แทน iptables ทั้งหมดด้วย eBPF programs ที่โหลดเข้า kernel. ทำให้ policy enforcement เร็วกว่า iptables มาก โดยเฉพาะเมื่อ rules มีจำนวนมาก",
+      table: {
+        header: ["ด้าน", "Calico", "Cilium"],
+        rows: [
+          ["Data Plane", "iptables / eBPF (optional)", "eBPF (native)"],
+          ["Routing", "BGP หรือ VXLAN", "eBPF routing"],
+          ["Network Policy", "iptables rules", "eBPF maps"],
+          ["Observability", "Limited", "Hubble (L7 visibility)"],
+          ["Performance (1000+ services)", "iptables ช้า", "O(1) lookup"],
+        ],
+      },
+    },
+    {
+      title: "Calico BGP Mode: ทำงานอย่างไร",
+      body: "ใน Calico BGP mode แต่ละ Node run BIRD (BGP daemon) ที่ advertise /26 Pod CIDR ของ node นั้นๆ. Node อื่นรับ route มาและ install ใน Linux routing table\n\nข้ามกัน subnet ต้องมี BGP peer ที่เป็น router จริงๆ (Route Reflector) หรือใช้ VXLAN/IPinIP encapsulation แทน",
+      code: `# ดู BGP peers ใน Calico
+calicoctl node status
+calicoctl get bgppeer -o yaml
+
+# ตรวจสอบ routes ที่ node เรียนรู้
+ip route show | grep bird
+# หรือ
+birdc show route`,
+      language: "bash",
+      tip: "Calico WireGuard encryption — เปิดได้ด้วย: calicoctl patch felixconfig default --type=merge -p spec.wireguardEnabled=true — encrypt Pod-to-Pod traffic โดยไม่ต้องเพิ่ม sidecar",
+    },
+    {
+      title: "Cilium eBPF: Network Policy ที่ Scale",
+      body: "iBPF Map ใน Cilium เก็บ policy rules เป็น hash map — lookup เป็น O(1) ไม่ว่าจะมีกี่ rules. เทียบกับ iptables ที่ traverse rules เป็น linear chain O(n)\n\nCilium ยัง support L7 Policy — สามารถ allow/deny HTTP path หรือ gRPC method ที่ specific ได้ โดยไม่ต้องใช้ service mesh",
+      code: `# Cilium L7 Network Policy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-api-v1
+spec:
+  endpointSelector:
+    matchLabels:
+      app: backend
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app: frontend
+    toPorts:
+    - ports:
+      - port: "8080"
+      rules:
+        http:
+        - method: GET
+          path: "/api/v1/.*"`,
+      language: "yaml",
+      warning: "Cilium L7 policy ต้องใช้ Envoy proxy บน node — เพิ่ม CPU overhead เล็กน้อย แต่ได้ visibility L7 ที่ละเอียดมาก",
+    },
   ],
   prerequisites: ["kubernetes-networking-overview"],
   concepts: ["CNI", "Flannel", "VXLAN", "Overlay", "Calico", "BGP", "BIRD", "Felix", "Cilium", "eBPF", "XDP", "Hubble", "kube-proxy Replacement", "NetworkPolicy", "WireGuard", "IPAM"],
@@ -565,6 +813,64 @@ const ebpfXdp: Lesson = {
     "เข้าใจ XDP (Express Data Path) และ Use Case",
     "อธิบาย BPF Maps ใช้ทำอะไร",
     "เชื่อมโยง eBPF กับ Cilium และ Network Observability",
+  ],
+  sections: [
+    {
+      title: "eBPF คืออะไร: Kernel Programming ที่ปลอดภัย",
+      body: "eBPF (extended Berkeley Packet Filter) ให้เราเขียน program ขนาดเล็กที่รันใน Linux kernel โดยไม่ต้องแก้ kernel source หรือ load kernel module. kernel ตรวจสอบ program ผ่าน verifier ก่อนรัน — ป้องกัน crash หรือ security issues\n\nใช้ใน networking (XDP, tc), observability (tracing syscalls, function calls), security (seccomp, LSM). Cilium, Falco, Pixie ทั้งหมดใช้ eBPF",
+      table: {
+        header: ["eBPF Program Type", "Hook Point", "Use Case"],
+        rows: [
+          ["XDP", "NIC receive path (before kernel)", "DDoS mitigation, load balancing"],
+          ["TC (Traffic Control)", "Network interface queue", "Packet manipulation, QoS"],
+          ["kprobe/tracepoint", "Kernel function entry/exit", "Performance tracing"],
+          ["socket filter", "Socket receive", "Packet filtering"],
+          ["cgroup", "cgroup attach point", "Container network policy"],
+        ],
+      },
+    },
+    {
+      title: "XDP: eXpress Data Path สำหรับ High-Performance Networking",
+      body: "XDP ทำงานก่อน kernel networking stack — packet เข้า NIC driver แล้ว XDP program รันทันที ก่อนที่จะ allocate sk_buff. ทำให้เร็วมาก (DPDK-level performance แต่อยู่ใน kernel)\n\nXDP action: XDP_PASS (ส่งขึ้น kernel stack ปกติ), XDP_DROP (ทิ้ง packet — DDoS mitigation), XDP_TX (ส่งกลับ interface เดิม), XDP_REDIRECT (ส่งไป interface/CPU อื่น)",
+      code: `// XDP program ตัวอย่าง — drop UDP flood
+#include <linux/bpf.h>
+#include <linux/if_ether.h>
+#include <linux/ip.h>
+#include <linux/udp.h>
+
+SEC("xdp")
+int xdp_drop_udp(struct xdp_md *ctx) {
+    void *data     = (void *)(long)ctx->data;
+    void *data_end = (void *)(long)ctx->data_end;
+    
+    struct ethhdr *eth = data;
+    if ((void *)(eth + 1) > data_end) return XDP_PASS;
+    if (eth->h_proto != htons(ETH_P_IP)) return XDP_PASS;
+    
+    struct iphdr *ip = (void *)(eth + 1);
+    if ((void *)(ip + 1) > data_end) return XDP_PASS;
+    if (ip->protocol == IPPROTO_UDP) return XDP_DROP;
+    
+    return XDP_PASS;
+}`,
+      language: "c",
+      tip: "XDP สามารถ process 14-20 million packets per second per core บน commodity hardware — เทียบกับ iptables ที่ทำได้ ~1-2 Mpps",
+    },
+    {
+      title: "eBPF Maps: Data Sharing ระหว่าง Kernel และ Userspace",
+      body: "eBPF Maps เป็น key-value store ที่ share ระหว่าง eBPF programs (kernel) กับ userspace application — ใช้ store counters, connection tables, policy rules\n\nMap types: BPF_MAP_TYPE_HASH (general key-value), BPF_MAP_TYPE_ARRAY (indexed), BPF_MAP_TYPE_LRU_HASH (auto-evict old entries), BPF_MAP_TYPE_PERCPU_HASH (per-CPU สำหรับ lockless counters)",
+      code: `# ใช้ bpftool ดู maps ทั้งหมด
+bpftool map list
+bpftool map dump id 42
+
+# ดู eBPF programs ที่รันอยู่
+bpftool prog list
+bpftool prog show id 100 --pretty
+
+# trace eBPF events
+bpftrace -e 'kprobe:tcp_connect { printf("connect: %s\n", comm); }'`,
+      language: "bash",
+    },
   ],
   prerequisites: ["cni-deep-dive-calico-cilium"],
   concepts: ["eBPF", "BPF", "XDP", "TC Hook", "kprobe", "uprobe", "BPF Map", "BPF Verifier", "CO-RE", "BTF", "libbpf", "bpftool", "perf", "Cilium", "Hubble", "Katran"],

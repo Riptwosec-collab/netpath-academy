@@ -2,8 +2,73 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { allHardwareLessons } from "@/data/hardwareCourses";
+import type { LessonSection } from "@/types/course";
+import MermaidDiagram from "@/components/lessons/MermaidDiagram";
 
 interface Props { params: { slug: string }; }
+
+function ContentSection({ sec }: { sec: LessonSection }) {
+  return (
+    <div className="mb-6 rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+      <div className="px-6 py-3 border-b border-white/[0.06] bg-white/[0.02]">
+        <h3 className="text-base font-bold text-white">{sec.title}</h3>
+      </div>
+      <div className="px-6 py-5 space-y-4">
+        {sec.body && (
+          <div className="space-y-2">
+            {sec.body.split("\n\n").map((para, i) => (
+              <p key={i} className="text-sm text-gray-300 leading-relaxed whitespace-pre-line">{para}</p>
+            ))}
+          </div>
+        )}
+        {sec.table && (
+          <div className="overflow-x-auto rounded-xl border border-white/[0.08]">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-white/[0.05]">
+                  {sec.table.header.map((h, i) => (
+                    <th key={i} className="text-left px-4 py-2.5 text-white/50 font-semibold uppercase tracking-wide border-b border-white/[0.06]">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sec.table.rows.map((row, ri) => (
+                  <tr key={ri} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                    {row.map((cell, ci) => (
+                      <td key={ci} className={`px-4 py-2.5 text-gray-300 ${ci === 0 ? "font-mono font-medium text-amber-300 whitespace-nowrap" : ""}`}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {sec.code && (
+          <div className="rounded-xl overflow-hidden border border-white/[0.08]">
+            <div className="px-4 py-1.5 bg-white/[0.04] border-b border-white/[0.06]">
+              <span className="text-xs text-gray-500 font-mono">{sec.language ?? "code"}</span>
+            </div>
+            <pre className="p-4 overflow-x-auto text-xs leading-relaxed bg-[#0a0f1e]">
+              <code className="text-emerald-300 font-mono">{sec.code}</code>
+            </pre>
+          </div>
+        )}
+        {sec.tip && (
+          <div className="flex gap-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-4 py-3">
+            <span className="text-amber-400 shrink-0">💡</span>
+            <p className="text-xs text-amber-300 leading-relaxed">{sec.tip}</p>
+          </div>
+        )}
+        {sec.warning && (
+          <div className="flex gap-3 rounded-xl border border-red-500/20 bg-red-500/[0.05] px-4 py-3">
+            <span className="text-red-400 shrink-0">⚠️</span>
+            <p className="text-xs text-red-300 leading-relaxed">{sec.warning}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export async function generateStaticParams() {
   return allHardwareLessons.map((l) => ({ slug: l.slug }));
@@ -24,6 +89,10 @@ const levelColor: Record<string, string> = {
 export default function HardwareLessonPage({ params }: Props) {
   const lesson = allHardwareLessons.find((l) => l.slug === params.slug);
   if (!lesson) notFound();
+
+  const idx  = allHardwareLessons.findIndex((l) => l.slug === params.slug);
+  const prev = allHardwareLessons[idx - 1];
+  const next = allHardwareLessons[idx + 1];
 
   return (
     <div className="min-h-screen bg-[#050816] text-gray-200">
@@ -46,6 +115,23 @@ export default function HardwareLessonPage({ params }: Props) {
           <h1 className="text-3xl font-bold text-white mb-2">{lesson.title}</h1>
           <p className="text-gray-400">{lesson.description}</p>
         </div>
+
+        {/* ── Rich Content Sections ── */}
+        {lesson.sections && lesson.sections.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-white mb-4">📖 เนื้อหา</h2>
+            {lesson.sections.map((sec: LessonSection, i: number) => (
+              <ContentSection key={i} sec={sec} />
+            ))}
+          </div>
+        )}
+
+        {/* Diagram */}
+        {lesson.mermaidDiagram && (
+          <Section title="📊 Diagram">
+            <MermaidDiagram chart={lesson.mermaidDiagram} />
+          </Section>
+        )}
 
         {/* Device Info */}
         <Section title="🖥️ Device Overview">
@@ -143,7 +229,7 @@ export default function HardwareLessonPage({ params }: Props) {
               <span className="text-3xl">🔬</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-amber-300 group-hover:text-amber-200 transition-colors">Hands-on Lab</p>
-                <p className="text-xs text-gray-500 mt-0.5">{lesson.labs.length} lab{lesson.labs.length > 1 ? 's' : ''} · ฝึกจากของจริง</p>
+                <p className="text-xs text-gray-500 mt-0.5">{lesson.labs.length} lab{lesson.labs.length > 1 ? "s" : ""} · ฝึกจากของจริง</p>
               </div>
               <span className="text-amber-500/50 group-hover:text-amber-400 transition-colors text-lg">→</span>
             </Link>
@@ -195,15 +281,36 @@ export default function HardwareLessonPage({ params }: Props) {
           </Section>
         )}
 
-
-        <div className="mt-10 flex justify-between">
-          <Link href="/hardware" className="px-4 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 text-sm transition-colors">
-            ← Hardware
-          </Link>
-          <Link href="/advanced" className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-sm font-medium transition-colors">
-            Advanced Tracks →
-          </Link>
+        {/* Prev / Next */}
+        <div className="mt-10 grid grid-cols-2 gap-4">
+          {prev ? (
+            <Link href={`/hardware/lessons/${prev.slug}`}
+              className="flex flex-col gap-1 rounded-xl border border-white/[0.07] hover:border-amber-500/20 bg-white/[0.02] hover:bg-white/[0.04] p-4 transition-all">
+              <span className="text-[10px] text-gray-600 uppercase tracking-wider">← Previous</span>
+              <span className="text-sm text-white font-medium line-clamp-1">{prev.title}</span>
+            </Link>
+          ) : (
+            <Link href="/hardware"
+              className="flex flex-col gap-1 rounded-xl border border-white/[0.07] hover:border-amber-500/20 bg-white/[0.02] hover:bg-white/[0.04] p-4 transition-all">
+              <span className="text-[10px] text-gray-600 uppercase tracking-wider">← Hardware</span>
+              <span className="text-sm text-gray-400 font-medium">Back to track</span>
+            </Link>
+          )}
+          {next ? (
+            <Link href={`/hardware/lessons/${next.slug}`}
+              className="flex flex-col gap-1 rounded-xl border border-white/[0.07] hover:border-amber-500/20 bg-white/[0.02] hover:bg-white/[0.04] p-4 transition-all text-right">
+              <span className="text-[10px] text-gray-600 uppercase tracking-wider">Next →</span>
+              <span className="text-sm text-white font-medium line-clamp-1">{next.title}</span>
+            </Link>
+          ) : (
+            <Link href="/advanced"
+              className="flex flex-col gap-1 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 transition-all text-right">
+              <span className="text-[10px] text-amber-600 uppercase tracking-wider">Done!</span>
+              <span className="text-sm text-amber-300 font-medium">Advanced Tracks →</span>
+            </Link>
+          )}
         </div>
+
       </div>
     </div>
   );

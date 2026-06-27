@@ -17,6 +17,43 @@ const cablingLesson: HardwareLesson = {
   duration: "90 min",
   xp: 100,
   description: "เรียนรู้ Copper Cable, Fiber Cable และ Transceiver ทุกประเภท พร้อม Comparison Table และ Use Case",
+  sections: [
+    {
+      title: "Copper vs Fiber: เลือกใช้เมื่อไหร่",
+      body: "Copper (UTP/STP) ใช้ในระยะสั้น ≤100m ใน horizontal cabling จาก patch panel ไปยัง workstation หรือ access switch — ราคาถูก, ติดตั้งง่าย, รองรับ PoE. Cat6A เป็น minimum สำหรับ 10GbE\n\nFiber Optic ใช้สำหรับ backbone และ inter-building links — Single-mode (yellow) สำหรับระยะไกล (>2km), Multi-mode (orange/aqua) สำหรับ datacenter ระยะ <500m",
+      table: {
+        header: ["สาย", "Category", "Max Speed", "Max Distance", "PoE"],
+        rows: [
+          ["UTP", "Cat5e", "1GbE", "100m", "ใช่ (PoE+)"],
+          ["UTP", "Cat6", "10GbE*", "55m*", "ใช่ (PoE+)"],
+          ["UTP", "Cat6A", "10GbE", "100m", "ใช่ (PoE++)"],
+          ["MMF", "OM3", "10GbE", "300m", "ไม่"],
+          ["MMF", "OM4", "40/100GbE", "150m", "ไม่"],
+          ["SMF", "OS2", "100GbE+", ">10km", "ไม่"],
+        ],
+      },
+    },
+    {
+      title: "Connector Types: RJ45, LC, SC, MPO/MTP",
+      body: "RJ45 เป็น connector มาตรฐานสำหรับ copper cable — 8P8C (8 pin, 8 conductor). Termination มาตรฐาน T568A หรือ T568B (ส่วนใหญ่ใช้ B)\n\nFiber connectors: LC (Lucent Connector) เล็ก ใช้ใน SFP/SFP+ transceiver, SC ใหญ่กว่า ใช้ใน older equipment, MPO/MTP สำหรับ 40G/100G high-density — รับได้ 12-24 fibers ใน connector เดียว",
+      tip: "MPO/MTP ต้องระวัง polarity — Type A, B, C มี pinout ต่างกัน. ถ้า polarity ผิด Tx ไม่ตรงกับ Rx อีกฝั่ง ทำให้ link ไม่ขึ้น",
+    },
+    {
+      title: "Structured Cabling: TIA-568 Standards",
+      body: "TIA-568 กำหนด Structured Cabling ออกเป็น subsystems: (1) Entrance Facility — จุด demarcation กับ ISP (2) Equipment Room — core switching/routing (3) Backbone Cabling — ระหว่าง floors/buildings (4) Telecom Room (TR) — IDF สำหรับแต่ละชั้น (5) Horizontal Cabling — TR ไปยัง workstation (6) Work Area — patch cord ที่ user desk",
+      code: `# ทดสอบ cable ด้วย cable tester
+# Fluke DTX-1800 commands
+AUTOTEST  # run full test suite
+WIREMAP   # ตรวจ pin continuity 
+LENGTH    # วัด length ด้วย TDR
+NEXT      # Near-End CrossTalk test
+
+# ทดสอบ fiber ด้วย OTDR
+# ตรวจ attenuation, connector loss, break point`,
+      language: "bash",
+      warning: "Bend radius ของ fiber cable ต้องไม่เล็กกว่า 10x เส้นผ่านศูนย์กลางของ cable (สำหรับ pulling) หรือ 15x (สำหรับ permanent bend) — fiber จะ crack และ attenuation จะสูงขึ้น",
+    },
+  ],
   deviceRole: "Physical medium สำหรับส่งสัญญาณ Network",
   osiLayer: ["Layer 1 — Physical"],
   commonPorts: ["RJ45", "LC", "SC", "MPO/MTP", "SFP", "QSFP"],
@@ -132,6 +169,49 @@ const switchHardware: HardwareLesson = {
   duration: "90 min",
   xp: 125,
   description: "เรียนรู้ Switch Hardware ทุกประเภท — Architecture, ASIC, Buffer, Port Types, PoE และ Switch Selection Guide",
+  sections: [
+    {
+      title: "Switch Hardware Architecture: ASIC, TCAM, Forwarding Engine",
+      body: "Network Switch ไม่ใช่แค่ 'bridge ที่มีหลาย port' — ภายในมี custom ASIC (Application-Specific Integrated Circuit) ที่ forward packet ที่ wire speed โดยไม่ผ่าน CPU\n\nTCAM (Ternary Content-Addressable Memory) เก็บ MAC table, ACL, routing table — lookup เป็น O(1) parallel โดยไม่ต้องวน loop. ราคาแพงและกินไฟ แต่เร็วมาก",
+      table: {
+        header: ["Component", "หน้าที่", "ข้อจำกัด"],
+        rows: [
+          ["ASIC", "Forward packet ที่ wire speed", "Fixed pipeline"],
+          ["TCAM", "MAC/ACL/route lookup O(1)", "ขนาดจำกัด (เช่น 128K entries)"],
+          ["Forwarding Engine", "Packet processing pipeline", "จำนวน stages คงที่"],
+          ["CPU", "Control plane: OSPF, STP, CLI", "ไม่ forward data plane"],
+          ["Packet Buffer", "Absorb traffic burst", "Deep buffer vs Low latency"],
+        ],
+      },
+    },
+    {
+      title: "Port Types และ Optics: SFP, SFP+, QSFP",
+      body: "SFP (Small Form-factor Pluggable) — 1GbE, สำหรับ access switch uplinks. SFP+ — 10GbE, ใช้ใน distribution/core และ server NIC. QSFP28 — 100GbE (4x25G), ใช้ใน datacenter spine. QSFP-DD / OSFP — 400GbE (8x50G)\n\nDirect Attach Copper (DAC) cable ใช้ระยะสั้น <7m ราคาถูกกว่า optic module มาก — แต่ไม่ flexible. Active Optical Cable (AOC) ราคากลาง ระยะได้ถึง 100m",
+      code: `! ตรวจสอบ optic บน Cisco Nexus
+show interface ethernet 1/1 transceiver
+show inventory  | grep SFP
+
+! ตรวจสอบ optical power
+show interface ethernet 1/1 transceiver detail
+! Rx Power ควร > -3 dBm สำหรับ good link
+! Rx Power < -14 dBm = อาจมีปัญหา`,
+      language: "text",
+      tip: "DOM (Digital Optical Monitoring) ช่วยอ่านค่า Tx Power, Rx Power, Temperature, Voltage จาก optic โดยตรง — ใช้ troubleshoot link issues ก่อน call TAC",
+    },
+    {
+      title: "Switch Form Factors: Fixed, Modular, Stackable",
+      body: "Fixed switch — port จำนวนคงที่ (24/48 ports) ราคาถูก ง่าย. Modular switch — ใส่ line card เพิ่มได้ (Catalyst 9600, Nexus 9508) flexible แต่แพง. Stackable — หลาย switches ต่อกันด้วย stack cable ทำงานเป็น logical unit เดียว\n\nStacking (Cisco StackWise, Juniper VC) ให้ single management plane, shared MAC/TCAM, single IP แต่ถ้า stack master fail ทั้ง stack อาจ reload",
+      table: {
+        header: ["Form Factor", "ใช้ที่ไหน", "Capacity", "Redundancy"],
+        rows: [
+          ["Fixed 1U", "Access layer", "24-48 ports", "Stacking"],
+          ["Stackable", "Access/Distribution", "8-12 units x 48p", "Stack master failover"],
+          ["Modular", "Core/Distribution", "100+ ports", "Dual supervisor"],
+          ["Blade", "Datacenter ToR", "High density 10/25/40G", "Built-in redundancy"],
+        ],
+      },
+    },
+  ],
   deviceRole: "เชื่อมต่อ Device ใน LAN ที่ Layer 2 (MAC Address-based forwarding)",
   osiLayer: ["Layer 2 — Data Link", "Layer 3 — Network (L3 Switch)"],
   commonPorts: ["RJ45", "SFP", "SFP+", "SFP28", "QSFP28", "Console", "Management", "Stack"],
@@ -243,6 +323,51 @@ const aiGpuHardware: HardwareLesson = {
   duration: "120 min",
   xp: 200,
   description: "เรียนรู้ Hardware ทุกชิ้นใน AI Cluster — GPU Server, NVLink, NVSwitch, RDMA NIC, SmartNIC/DPU, InfiniBand และ 400/800G Switch",
+  sections: [
+    {
+      title: "GPU Server Architecture: PCIe vs NVLink",
+      body: "GPU Server สำหรับ AI Training ต้องการ GPU bandwidth สูงมาก — NVIDIA A100 มี 400GB/s memory bandwidth. การ communicate ระหว่าง GPU ใช้ NVLink (ภายใน server) หรือ RDMA over network\n\nNVLink ใน A100 ให้ 600GB/s bidirectional bandwidth ระหว่าง GPU ใน server เดียวกัน. PCIe Gen4 ให้แค่ 64GB/s — ทำให้ NVSwitch architecture (DGX A100) สำคัญมากสำหรับ training",
+      table: {
+        header: ["Interconnect", "Bandwidth", "ระยะ", "Use Case"],
+        rows: [
+          ["NVLink 3.0", "600GB/s", "ภายใน server", "GPU-GPU (same server)"],
+          ["PCIe Gen4 x16", "64GB/s", "ภายใน server", "GPU-CPU, GPU-NIC"],
+          ["InfiniBand HDR", "200Gb/s", "ข้าม server", "GPU-GPU (multi-node)"],
+          ["RoCEv2 (400GbE)", "400Gbps", "ข้าม server", "Cost-effective multi-node"],
+        ],
+      },
+    },
+    {
+      title: "DGX Systems และ HGX Platform",
+      body: "NVIDIA DGX A100 — server สำเร็จรูปที่มี 8x A100 GPU, 8x 200GbE InfiniBand port, NVSwitch ที่เชื่อม GPU ทั้ง 8 ตัวแบบ full mesh bandwidth\n\nHGX คือ baseboard ที่ OEM (Dell, HPE, Supermicro) นำไปใส่ใน server chassis ของตัวเอง — ประหยัดกว่า DGX แต่ต้องตรวจสอบ cooling และ power delivery เอง. Network: ต้องการ GPU NIC (ConnectX-7) แต่ละ GPU ต้องการ NICs ของตัวเอง",
+      code: `# ตรวจสอบ GPU topology
+nvidia-smi topo -m
+# แสดง NVLink, PCIe, SYS connections ระหว่าง GPU
+
+# ตรวจสอบ RDMA performance
+ib_write_bw -d mlx5_0 -i 1 -F --report_gbits
+# ทดสอบ bandwidth ระหว่าง 2 servers
+
+# ตรวจสอบ GPU utilization
+nvidia-smi dmon -s pucvmet -d 1`,
+      language: "bash",
+      tip: "GPU NIC placement สำคัญมาก — NIC ควรอยู่ใน PCIe slot ที่ใกล้ GPU (same CPU socket, same PCIe root complex) เพื่อลด latency และเพิ่ม bandwidth",
+    },
+    {
+      title: "Power และ Cooling: GPU Cluster Requirements",
+      body: "A100 GPU กิน 400W per GPU — DGX A100 (8 GPUs) กินไฟ ~6.5kW per server. Rack ของ AI servers ต้องการ 20-40kW per rack เทียบกับ enterprise server ที่ ~5-10kW\n\nCooling: Air cooling ธรรมดาทำได้ถึง ~15-20kW per rack. สำหรับ >20kW ต้องใช้ Direct Liquid Cooling (DLC) หรือ Immersion Cooling. Power: ต้องการ 3-phase power, PDU ที่รองรับ high density, redundant UPS",
+      table: {
+        header: ["GPU", "TDP (Watts)", "Rack Density", "Cooling Required"],
+        rows: [
+          ["A100 80GB", "400W", "8 GPUs = 3.2kW", "Air หรือ DLC"],
+          ["H100 SXM5", "700W", "8 GPUs = 5.6kW", "DLC strongly recommended"],
+          ["H100 PCIe", "350W", "8 GPUs = 2.8kW", "Air (barely)"],
+          ["GB200 NVL72", "~1000W/GPU", "72 GPUs rack", "Liquid cooling required"],
+        ],
+      },
+      warning: "ถ้า datacenter facility ไม่รองรับ high-density power (>20kW/rack) และ liquid cooling, AI GPU cluster จะไม่สามารถ deploy ได้ — ต้องประเมิน facility ก่อนสั่ง hardware",
+    },
+  ],
   deviceRole: "AI Training/Inference Cluster Infrastructure",
   osiLayer: ["Layer 1 — Physical", "Layer 2 — Data Link", "Special: InfiniBand/RDMA Stack"],
   commonPorts: ["NVLink", "PCIe 5.0", "OSFP 400G", "QSFP-DD 400G", "InfiniBand HDR/NDR"],

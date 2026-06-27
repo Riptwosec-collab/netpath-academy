@@ -1,4 +1,4 @@
-import type { CourseLevel, TroubleshootingEntry, QuizQuestion, InterviewQuestion } from "./course";
+import type { CourseLevel, TroubleshootingEntry, QuizQuestion, InterviewQuestion, LessonSection } from "./course";
 
 export type HardwareCategory =
   | "cabling"
@@ -57,6 +57,10 @@ export interface HardwareLesson {
 
   tags: string[];
   order: number;
+
+  // optional rich-content fields
+  sections?: LessonSection[];
+  mermaidDiagram?: string;
 }
 
 export interface HardwareCategoryInfo {
