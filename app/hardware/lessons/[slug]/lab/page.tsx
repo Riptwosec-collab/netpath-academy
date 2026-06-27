@@ -68,7 +68,7 @@ export default function HardwareLabPage({ params }: Props) {
                   {lab.estimatedMinutes && (
                     <span className="text-xs text-gray-400 bg-gray-800/60 px-2.5 py-1 rounded-full">⏱ {lab.estimatedMinutes} min</span>
                   )}
-                  <span className={`text-xs px-2.5 py-1 rounded-full border ${levelColor[lab.level] ?? "text-gray-400 bg-gray-800/60 border-gray-700"}`}>{lab.level}</span>
+                  <span className={`text-xs px-2.5 py-1 rounded-full border ${levelColor[lesson.level] ?? "text-gray-400 bg-gray-800/60 border-gray-700"}`}>{lesson.level}</span>
                 </div>
               </div>
               <div className="px-6 py-5">
