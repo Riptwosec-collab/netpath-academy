@@ -2233,6 +2233,305 @@ logging trap informational
 logging buffered 16384`,
     roadmapLevel: 4,
   },
+  {
+    id:          "cross-wireless-security",
+    title:       "Wireless Security + 802.1X + RADIUS",
+    category:    "Cross-Track",
+    level:       "Advanced",
+    duration:    "75 min",
+    status:      "available",
+    description: "WPA3 Enterprise + 802.1X EAP-TLS + FreeRADIUS + VLAN assignment — Wireless Security ระดับ Enterprise",
+    scenario:    "บริษัท upgrade จาก WPA2-PSK เป็น WPA3 Enterprise พร้อม 802.1X สำหรับ 300 users — staff VLAN 10, contractors VLAN 20, guests VLAN 99",
+    objective:   "Deploy WPA3 Enterprise 802.1X ด้วย RADIUS VLAN assignment + test roaming security",
+    devices: ["WLC-1", "AP-01", "RADIUS-Server", "SW-1", "PC-Staff", "PC-Guest"],
+    topology: [
+      { from: "AP-01", to: "WLC-1", port: "CAPWAP UDP 5246/5247" },
+      { from: "WLC-1", to: "SW-1", port: "Trunk VLAN 10/20/99" },
+      { from: "SW-1", to: "RADIUS-Server", port: "UDP 1812/1813" },
+    ],
+    ipTable: [
+      { device: "WLC-1",       interface: "Management",   ip: "10.0.0.1",   subnet: "255.255.255.0", gateway: "10.0.0.254" },
+      { device: "RADIUS-SRV",  interface: "eth0",         ip: "10.0.0.20",  subnet: "255.255.255.0", gateway: "10.0.0.254" },
+      { device: "Staff VLAN",  interface: "VLAN 10",      ip: "10.10.10.0", subnet: "255.255.255.0", gateway: "10.10.10.1" },
+      { device: "Guest VLAN",  interface: "VLAN 99",      ip: "10.99.99.0", subnet: "255.255.255.0", gateway: "10.99.99.1" },
+    ],
+    tasks: [
+      "Configure FreeRADIUS: clients.conf เพิ่ม WLC-1 (secret=RadiusSecret123); users file: staff01 → Tunnel-Private-Group-Id=10, contractor01 → VLAN 20",
+      "WLC GUI: WLANs → Create 'CorpNet' → Security: WPA3 Enterprise → 802.1X → RADIUS 10.0.0.20:1812",
+      "WLC: Controller → Interfaces → สร้าง staff-vlan10 (VLAN 10), contractor-vlan20 (VLAN 20), guest-vlan99 (VLAN 99)",
+      "Enable 'Allow AAA Override' บน WLAN CorpNet — จำเป็นสำหรับ dynamic VLAN assignment",
+      "ทดสอบ: connect PC-Staff ด้วย staff01 credentials → ตรวจว่าได้ IP จาก 10.10.10.0/24",
+      "ตรวจสอบ: show client detail <mac> บน WLC — ดู SSID, VLAN, Authentication ถูกต้อง",
+    ],
+    hints: [
+      "Allow AAA Override ต้อง enable — ถ้าไม่เปิด VLAN assignment จาก RADIUS จะไม่ทำงาน",
+      "RADIUS secret ต้องตรงกันทั้ง WLC และ FreeRADIUS clients.conf",
+      "debug aaa all บน WLC + tail -f /var/log/freeradius/radius.log สำหรับ troubleshoot",
+    ],
+    expectedResult: "Client staff01 ได้ IP จาก VLAN 10 (10.10.10.x); contractor01 ได้ VLAN 20 — verified ด้วย show client detail",
+    troubleshooting: [
+      "Authentication rejected: ตรวจ RADIUS secret ทั้ง 2 ฝั่ง, ตรวจ certificate validity, ดู /var/log/freeradius/radius.log",
+      "VLAN assignment ไม่ทำงาน: เปิด Allow AAA Override บน WLC WLAN settings, ตรวจ Tunnel attributes ใน RADIUS user",
+      "AP ไม่ join WLC: ตรวจ CAPWAP reachability (UDP 5246), ตรวจ AP mode = LWAPP, ตรวจ WLC IP config",
+    ],
+    solution: `! FreeRADIUS /etc/freeradius/3.0/users
+staff01 Cleartext-Password := "Pass@123"
+        Tunnel-Type = VLAN,
+        Tunnel-Medium-Type = IEEE-802,
+        Tunnel-Private-Group-Id = 10
+! WLC verify
+show wlan summary
+show client detail <mac>`,
+    roadmapLevel: 4,
+  },
+
+  {
+    id:          "cross-mpls-l3vpn",
+    title:       "MPLS L3VPN — PE-CE Routing + VRF",
+    category:    "Cross-Track",
+    level:       "Advanced",
+    duration:    "90 min",
+    status:      "available",
+    description: "MPLS L3VPN ด้วย BGP VPNv4, VRF, RD/RT — simulate service provider ที่แยก customer traffic",
+    scenario:    "ISP ให้บริการ L3VPN สำหรับ 2 customers ผ่าน MPLS backbone — แต่ละ customer ต้องการ private routing ไม่ปนกัน",
+    objective:   "Configure MPLS LDP + BGP VPNv4 ระหว่าง PE routers + VRF แยก CustomerA/B",
+    devices: ["PE1", "P1", "PE2", "CE-A1", "CE-A2", "CE-B1"],
+    topology: [
+      { from: "CE-A1", to: "PE1", port: "eBGP 65001" },
+      { from: "PE1", to: "P1", port: "MPLS LDP" },
+      { from: "P1", to: "PE2", port: "MPLS LDP" },
+      { from: "PE2", to: "CE-A2", port: "eBGP 65001" },
+    ],
+    ipTable: [
+      { device: "PE1 Lo0", interface: "Loopback0", ip: "1.1.1.1", subnet: "255.255.255.255", gateway: "-" },
+      { device: "P1 Lo0",  interface: "Loopback0", ip: "2.2.2.2", subnet: "255.255.255.255", gateway: "-" },
+      { device: "PE2 Lo0", interface: "Loopback0", ip: "3.3.3.3", subnet: "255.255.255.255", gateway: "-" },
+      { device: "PE1-P1",  interface: "Gi0/1",     ip: "10.12.0.1", subnet: "255.255.255.252", gateway: "-" },
+      { device: "CE-A1",   interface: "Gi0/0",     ip: "172.16.1.1", subnet: "255.255.255.252", gateway: "172.16.1.2" },
+    ],
+    tasks: [
+      "Enable OSPF + MPLS LDP บน PE1, P1, PE2: router ospf 1 + mpls ldp autoconfig — verify: show mpls ldp neighbor",
+      "สร้าง VRF CustomerA บน PE1 + PE2: ip vrf CustomerA, rd 100:1, route-target export/import 100:1",
+      "Assign VRF ให้ PE-CE interface: interface Gi0/0 → ip vrf forwarding CustomerA → ip address",
+      "Configure BGP VPNv4 iBGP ระหว่าง PE1-PE2: neighbor 3.3.3.3 + address-family vpnv4 + send-community extended",
+      "Configure eBGP PE-CE: address-family ipv4 vrf CustomerA → neighbor CE remote-as 65001",
+      "Verify: show bgp vpnv4 unicast all | show ip route vrf CustomerA | ping vrf CustomerA CE-A2",
+    ],
+    hints: [
+      "LDP session ต้องขึ้นก่อน — show mpls ldp neighbor ต้องเห็น Operational",
+      "RD ไม่จำเป็นต้องเหมือนกันระหว่าง PE; RT import/export ต้องตรงกันใน VPN เดียวกัน",
+      "ip cef ต้อง enable (default บน IOS) — MPLS ต้องการ CEF",
+    ],
+    expectedResult: "CustomerA Site1 ping Site2 ผ่าน MPLS สำเร็จ; CustomerB ไม่เห็น routes ของ CustomerA (VRF isolation)",
+    troubleshooting: [
+      "MPLS labels ไม่ assign: ตรวจ ip cef enable, LDP neighbor up (show mpls ldp neighbor), MPLS enable บน interface",
+      "VPNv4 routes ไม่ถ่ายทอด: ตรวจ send-community extended บน iBGP neighbors, ตรวจ RT import/export ตรงกัน",
+      "ping vrf ล้มเหลว: ตรวจ route ใน VRF (show ip route vrf CustomerA), ตรวจ CE-PE eBGP session up",
+    ],
+    solution: `show mpls ldp neighbor
+show mpls forwarding-table
+show bgp vpnv4 unicast all
+show ip route vrf CustomerA
+ping vrf CustomerA 172.16.2.1 source 172.16.1.1`,
+    roadmapLevel: 5,
+  },
+
+  {
+    id:          "cross-ha-redundancy",
+    title:       "High Availability — HSRP + BFD + NSF",
+    category:    "Cross-Track",
+    level:       "Advanced",
+    duration:    "80 min",
+    status:      "available",
+    description: "HSRP Active/Standby + BFD fast detection + NSF/GR — sub-second failover สำหรับ Data Center gateway",
+    scenario:    "Data center ต้องการ failover < 1 วินาทีเมื่อ primary gateway ล้มเหลว — users ไม่รู้ตัว",
+    objective:   "Deploy HSRP + BFD + track object + OSPF NSF เพื่อ achieve sub-second failover",
+    devices: ["GW1-Primary", "GW2-Standby", "CORE-SW", "SERVER-01", "SERVER-02"],
+    topology: [
+      { from: "SERVER-01", to: "CORE-SW", port: "Gi0/1" },
+      { from: "CORE-SW", to: "GW1-Primary", port: "Gi0/0 — HSRP Active" },
+      { from: "CORE-SW", to: "GW2-Standby", port: "Gi0/0 — HSRP Standby" },
+      { from: "GW1-Primary", to: "ISP", port: "WAN Gi0/1" },
+      { from: "GW2-Standby", to: "ISP", port: "WAN Gi0/1" },
+    ],
+    ipTable: [
+      { device: "GW1 LAN",  interface: "Gi0/0", ip: "10.0.1.1", subnet: "255.255.255.0", gateway: "-" },
+      { device: "GW2 LAN",  interface: "Gi0/0", ip: "10.0.1.2", subnet: "255.255.255.0", gateway: "-" },
+      { device: "HSRP VIP", interface: "Virtual", ip: "10.0.1.254", subnet: "255.255.255.0", gateway: "-" },
+      { device: "GW1 WAN",  interface: "Gi0/1", ip: "203.0.113.1", subnet: "255.255.255.252", gateway: "203.0.113.2" },
+    ],
+    tasks: [
+      "GW1 (Active): interface Gi0/0 → standby version 2 → standby 1 ip 10.0.1.254 → priority 110 → preempt delay minimum 30 → track 1 decrement 20",
+      "GW2 (Standby): interface Gi0/0 → standby version 2 → standby 1 ip 10.0.1.254 → standby 1 preempt",
+      "Track object บน GW1: track 1 interface GigabitEthernet0/1 line-protocol",
+      "BFD บน GW1+GW2: interface Gi0/0 → bfd interval 100 min_rx 100 multiplier 3 → ip ospf bfd",
+      "OSPF NSF: router ospf 1 → nsf cisco — ทำให้ OSPF restart ไม่ flush neighbor routes",
+      "Test failover: ping 8.8.8.8 repeat 10000 บน SERVER → shutdown Gi0/1 บน GW1 → นับ packet drops",
+    ],
+    hints: [
+      "BFD 100ms × 3 = 300ms detection — เร็วกว่า OSPF dead interval 40 วินาทีมาก",
+      "preempt delay minimum 30 — ให้ GW1 รอ routing converge ก่อน preempt กลับ",
+      "track decrement 20 → GW1 priority 110-20=90 < GW2 100 → GW2 กลาย active",
+    ],
+    expectedResult: "Failover < 1 วินาที (BFD 300ms + HSRP); ping loss < 3 packets; GW1 preempt กลับหลัง WAN recover",
+    troubleshooting: [
+      "HSRP ไม่ failover: ตรวจ track object (show track 1) ต้องเป็น Down เมื่อ interface shutdown",
+      "BFD session ไม่ขึ้น: ตรวจ ip ospf bfd บน interface, bfd interval ทั้ง 2 ฝั่งตรงกัน",
+      "HSRP ไม่ preempt กลับ: ตรวจ standby 1 preempt บน GW1, ตรวจ priority 110 > 100",
+    ],
+    solution: `show standby brief
+show track 1
+show bfd neighbors
+show ip ospf neighbor
+! Expected: Active→Standby ใน < 1 sec เมื่อ WAN ล้ม`,
+    roadmapLevel: 4,
+  },
+
+  {
+    id:          "cross-sdwan-terraform",
+    title:       "SD-WAN + Terraform Infrastructure as Code",
+    category:    "Cross-Track",
+    level:       "Advanced",
+    duration:    "100 min",
+    status:      "available",
+    description: "Deploy Cisco SD-WAN policy บน vManage ด้วย Terraform provider + Ansible branch onboarding automation",
+    scenario:    "บริษัท expand 10 branches/เดือน — automate WAN edge onboarding ด้วย IaC แทน manual CLI",
+    objective:   "ใช้ Terraform cisco-sdwan provider สร้าง site policy + QoS policy + Ansible deploy edge config",
+    devices: ["vManage", "vSmart", "vBond", "WAN-Edge-01", "WAN-Edge-02"],
+    topology: [
+      { from: "WAN-Edge-01", to: "vBond", port: "DTLS orchestration" },
+      { from: "WAN-Edge-01", to: "vSmart", port: "OMP policy" },
+      { from: "WAN-Edge-01", to: "vManage", port: "HTTPS mgmt" },
+      { from: "vManage", to: "Terraform", port: "REST API" },
+    ],
+    ipTable: [
+      { device: "vManage",   interface: "eth0",   ip: "198.18.0.1",  subnet: "255.255.255.0", gateway: "198.18.0.254" },
+      { device: "vSmart",    interface: "eth0",   ip: "198.18.0.2",  subnet: "255.255.255.0", gateway: "198.18.0.254" },
+      { device: "vBond",     interface: "eth0",   ip: "198.18.0.3",  subnet: "255.255.255.0", gateway: "198.18.0.254" },
+      { device: "WAN-Edge LAN", interface: "Gi0/1", ip: "10.100.1.1", subnet: "255.255.255.0", gateway: "-" },
+    ],
+    tasks: [
+      "Terraform provider setup: main.tf → provider sdwan { url=https://198.18.0.1, username, password } → terraform init",
+      "สร้าง VPN Feature Template: resource sdwan_cisco_vpn_feature_template branch_vpn → device_types=[vedge-ISR-1100]",
+      "สร้าง AAR Policy ด้วย Terraform: sdwan_application_aware_routing_policy → critical apps via MPLS preferred",
+      "Ansible playbook onboard_branch.yml: ดึง XSRF token → POST /dataservice/template/device/config/attachfeature",
+      "terraform plan && terraform apply → ตรวจสอบ policy ถูก push ไป WAN Edge",
+      "Verify: show sdwan bfd sessions | show sdwan app-route stats | show sdwan policy from-vsmart",
+    ],
+    hints: [
+      "Terraform state สำคัญมาก — ใช้ remote backend (S3) ไม่ใช่ local state",
+      "vManage API ต้องการ XSRF token — ดึงจาก /dataservice/client/token หลัง login",
+      "SD-WAN template hierarchy: Device Template = Feature Templates รวมกัน",
+    ],
+    expectedResult: "WAN Edge ขึ้น BFD sessions กับ vSmart, policy apply, critical apps route ผ่าน MPLS",
+    troubleshooting: [
+      "Terraform auth ล้มเหลว: ตรวจ vManage URL/certificate (insecure=true), ตรวจ username/password",
+      "WAN Edge ไม่ขึ้น control connection: ตรวจ vBond reachability, ตรวจ serial number authorized ใน vManage",
+      "Policy ไม่ apply: ตรวจ template attach status ใน vManage GUI → Configuration → Devices",
+    ],
+    solution: `terraform show
+show sdwan bfd sessions
+show sdwan control connections
+show sdwan policy from-vsmart`,
+    roadmapLevel: 5,
+  },
+
+  {
+    id:          "cross-ipv6-ospfv3",
+    title:       "OSPFv3 for IPv6 + Dual-Stack + DHCPv6",
+    category:    "Cross-Track",
+    level:       "Intermediate",
+    duration:    "70 min",
+    status:      "available",
+    description: "OSPFv3 IPv6 multi-area routing + dual-stack + DHCPv6 stateful — migrate enterprise network สู่ IPv6",
+    scenario:    "องค์กรต้องการ dual-stack: OSPFv2 สำหรับ IPv4 และ OSPFv3 สำหรับ IPv6 บน infrastructure เดิม + DHCPv6 clients",
+    objective:   "Configure OSPFv3 IPv6 multi-area, redistribute ข้าม areas, deploy DHCPv6 stateful",
+    devices: ["R1-Area0", "R2-ABR", "R3-Area1", "DHCPv6-SRV", "PC-Client"],
+    topology: [
+      { from: "R1-Area0", to: "R2-ABR", port: "OSPFv3 Area 0 — 2001:db8:12::/64" },
+      { from: "R2-ABR", to: "R3-Area1", port: "OSPFv3 Area 1 — 2001:db8:23::/64" },
+      { from: "R3-Area1", to: "PC-Client", port: "LAN 2001:db8:3::/64" },
+    ],
+    ipTable: [
+      { device: "R1 Lo0",    interface: "Loopback0", ip: "2001:db8:1::1", subnet: "/128", gateway: "-" },
+      { device: "R1-R2 Link", interface: "Gi0/0",   ip: "2001:db8:12::1", subnet: "/64", gateway: "-" },
+      { device: "R2 Lo0",    interface: "Loopback0", ip: "2001:db8:2::1", subnet: "/128", gateway: "-" },
+      { device: "R3 LAN",    interface: "Gi0/1",    ip: "2001:db8:3::1", subnet: "/64", gateway: "-" },
+    ],
+    tasks: [
+      "Enable IPv6: ipv6 unicast-routing + ipv6 cef บนทุก router",
+      "Configure OSPFv3: router ospfv3 1 → router-id 1.1.1.1 บน R1; interface Gi0/0 → ipv6 ospf 1 area 0",
+      "R2 ABR: interface Gi0/0 → area 0; interface Gi0/1 → area 1 — verify: show ospfv3 neighbor",
+      "DHCPv6 Pool บน R1: ipv6 dhcp pool CLIENTS → address prefix 2001:db8:3::/64 → dns-server 2001:db8::53",
+      "Enable DHCPv6 บน R1 interface: ipv6 dhcp server CLIENTS → ipv6 nd managed-config-flag",
+      "Verify: show ospfv3 neighbor | show ipv6 route ospf | show ipv6 dhcp binding | ping 2001:db8:2::1 source lo0",
+    ],
+    hints: [
+      "OSPFv3 ต้องการ ipv6 unicast-routing ก่อน — ถ้าลืม neighbor จะไม่ขึ้น",
+      "Router-ID ใน OSPFv3 เป็น 32-bit dotted decimal เหมือน OSPFv2 — ไม่ใช่ IPv6 address",
+      "DHCPv6 M-bit = stateful (address); O-bit = stateless (DNS only); ใช้ managed-config-flag สำหรับ M-bit",
+    ],
+    expectedResult: "OSPFv3 neighbor ขึ้นทุก router, routes ถ่ายทอดข้าม areas, PC-Client ได้ IPv6 จาก DHCPv6 pool",
+    troubleshooting: [
+      "OSPFv3 neighbor ไม่ขึ้น: ตรวจ ipv6 unicast-routing enable, ipv6 ospf บน interface, area number ตรงกัน",
+      "DHCPv6 client ไม่ได้ address: ตรวจ M-bit set (ipv6 nd managed-config-flag), ตรวจ DHCPv6 pool, debug ipv6 dhcp detail",
+      "Routes ไม่ถ่ายทอดข้าม area: ตรวจ R2 เป็น ABR จริง (show ospfv3 border-routers), ตรวจ area ID ถูกต้อง",
+    ],
+    solution: `show ospfv3 1 neighbor
+show ipv6 route ospf
+show ipv6 dhcp binding
+ping 2001:db8:3::1 source loopback0`,
+    roadmapLevel: 3,
+  },
+
+  {
+    id:          "cross-security-hardening",
+    title:       "Security Hardening — AAA + CoPP + 802.1X",
+    category:    "Cross-Track",
+    level:       "Advanced",
+    duration:    "85 min",
+    status:      "available",
+    description: "Enterprise security hardening: TACACS+ AAA, Control Plane Policing, 802.1X port authentication, SSH hardening",
+    scenario:    "Security audit พบ: local auth บน devices, ไม่มี CoPP, switches เปิด open access — ต้องแก้ทั้งหมด",
+    objective:   "Deploy TACACS+ AAA + CoPP + 802.1X + SSH hardening — enterprise security baseline ครบ",
+    devices: ["TACACS-ISE", "CORE-SW", "ROUTER-1", "ACCESS-SW", "PC-IT", "PC-User"],
+    topology: [
+      { from: "ACCESS-SW", to: "CORE-SW", port: "Trunk 802.1Q" },
+      { from: "CORE-SW", to: "ROUTER-1", port: "Gi0/0 uplink" },
+      { from: "ROUTER-1", to: "TACACS-ISE", port: "UDP 49 TACACS+" },
+      { from: "PC-IT", to: "ACCESS-SW", port: "802.1X port" },
+    ],
+    ipTable: [
+      { device: "TACACS-ISE", interface: "eth0",   ip: "10.0.0.5",  subnet: "255.255.255.0", gateway: "10.0.0.254" },
+      { device: "ROUTER-1",   interface: "Gi0/0",  ip: "10.0.0.1",  subnet: "255.255.255.0", gateway: "-" },
+      { device: "CORE-SW",    interface: "VLAN1",  ip: "10.0.0.2",  subnet: "255.255.255.0", gateway: "10.0.0.254" },
+      { device: "ACCESS-SW",  interface: "VLAN1",  ip: "10.0.0.3",  subnet: "255.255.255.0", gateway: "10.0.0.254" },
+    ],
+    tasks: [
+      "TACACS+ AAA บน ROUTER + CORE-SW: aaa new-model → tacacs server ISE-TACACS (ip 10.0.0.5, key TacacsSecret123) → aaa authentication login default group tacacs+ local → aaa authorization commands 15 default group tacacs+ local",
+      "SSH Hardening: crypto key generate rsa modulus 4096 → ip ssh version 2 → line vty 0 15 transport input ssh → exec-timeout 10 0 → access-class MGMT-ACL in → banner login",
+      "CoPP Policy: class-map CRITICAL-CP (ospf, bgp) + MANAGEMENT-CP (ssh, snmp) + ICMP-CP → policy-map CoPP-POLICY ด้วย police rate ต่างๆ → control-plane service-policy input CoPP-POLICY",
+      "802.1X บน ACCESS-SW: aaa authentication dot1x default group radius → dot1x system-auth-control → interface range Gi0/1-24 → authentication port-control auto → dot1x pae authenticator",
+      "ทดสอบ TACACS+: test aaa group tacacs+ admin Pass@123 new-code → ต้องได้ PASS",
+      "Verify CoPP: show policy-map control-plane → ตรวจ drops ในแต่ละ class",
+    ],
+    hints: [
+      "local fallback (aaa ... group tacacs+ local) สำคัญมาก — ถ้า TACACS ล้มแล้วไม่มี fallback จะ lock ตัวเองออก",
+      "CoPP class-default ควร police อย่างเข้มงวด — ป้องกัน unknown traffic flood CPU",
+      "802.1X ต้องการ Supplicant บน client (Windows: Wired AutoConfig service)",
+    ],
+    expectedResult: "SSH login ผ่าน TACACS+ สำเร็จ + audit log บน ISE; CoPP active protect CPU; 802.1X blocks unauthorized ports",
+    troubleshooting: [
+      "TACACS+ authentication fail — locked out: Console เข้า device ใช้ local account, ตรวจ TACACS reachability, test aaa group tacacs+ USER PASS new-code",
+      "CoPP drops legitimate traffic: show policy-map control-plane ดู drops, เพิ่ม rate ใน class ที่ถูก drop มากเกิน",
+      "802.1X client ไม่ผ่าน: show authentication sessions interface Gi0/1, debug dot1x all, test aaa group radius USER PASS new-code",
+    ],
+    solution: `show aaa servers
+show policy-map control-plane
+show authentication sessions
+test aaa group tacacs+ admin Pass@123 new-code`,
+    roadmapLevel: 4,
+  },
 
 ];
 
