@@ -1,4 +1,3 @@
-"use server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { automationLessons } from "@/data/automationCourses";
