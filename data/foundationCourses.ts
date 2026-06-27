@@ -148,6 +148,66 @@ const osiModel: Lesson = {
   ],
   prerequisites: ["network-fundamentals"],
   concepts: ["Physical", "Data Link", "Network", "Transport", "Session", "Presentation", "Application", "PDU", "Encapsulation", "Decapsulation"],
+  sections: [
+    {
+      title: "OSI Model คืออะไร และทำไมต้องรู้?",
+      body: "OSI Model (Open Systems Interconnection) เป็น Framework 7 ชั้นที่ ISO กำหนดขึ้นเพื่ออธิบายว่าข้อมูลเดินทางผ่านเครือข่ายอย่างไร\n\nแม้ในชีวิตจริงจะใช้ TCP/IP Model แต่ OSI ยังสำคัญมากเพราะ:\n- ใช้พูดถึง Layer ที่เกิดปัญหาได้ตรงจุด เช่น 'Layer 1 issue' = สาย/สัญญาณมีปัญหา\n- Vendor, Engineer ทุกคนใช้ภาษาเดียวกัน\n- ช่วยในการ Troubleshoot อย่างเป็นระบบ",
+      tip: "จำชื่อ Layer: 'Please Do Not Throw Sausage Pizza Away' (Physical, Data Link, Network, Transport, Session, Presentation, Application)",
+    },
+    {
+      title: "7 Layers อธิบายทีละชั้น",
+      body: "แต่ละ Layer มีหน้าที่เฉพาะและส่งต่อข้อมูลให้ Layer ถัดไป:",
+      table: {
+        header: ["Layer", "ชื่อ", "หน้าที่", "อุปกรณ์/Protocol"],
+        rows: [
+          ["7", "Application", "Interface กับ User และ Application", "HTTP, DNS, FTP, SMTP"],
+          ["6", "Presentation", "แปลง format, Encrypt, Compress", "SSL/TLS, JPEG, MP3"],
+          ["5", "Session", "จัดการ Session (เปิด/ปิด connection)", "NetBIOS, RPC, SIP"],
+          ["4", "Transport", "ส่งข้อมูล end-to-end, port, reliability", "TCP, UDP"],
+          ["3", "Network", "Routing ระหว่าง network, IP address", "Router, IP, OSPF, BGP"],
+          ["2", "Data Link", "ส่งระหว่าง node ใน network เดียว, MAC", "Switch, Ethernet, VLAN"],
+          ["1", "Physical", "Signal ทางกายภาพ, bits บนสาย", "Cable, Hub, NIC, WiFi"],
+        ],
+      },
+    },
+    {
+      title: "Encapsulation — ข้อมูลถูกห่อยังไงตอนส่ง",
+      body: "เมื่อ Application ส่งข้อมูล แต่ละ Layer จะเพิ่ม Header (บางครั้ง Trailer) ของตัวเอง เรียกว่า Encapsulation\n\nตัวอย่าง: คุณเปิดเว็บ google.com\n1. Browser สร้าง HTTP Request (Layer 7)\n2. TLS เข้ารหัส (Layer 6)\n3. TCP เพิ่ม Port + Sequence (Layer 4)\n4. IP เพิ่ม Source/Destination IP (Layer 3)\n5. Ethernet เพิ่ม MAC Address (Layer 2)\n6. ส่งออกเป็น electrical signal (Layer 1)\n\nฝั่งรับจะ Decapsulate ถอด header ทีละชั้นจนถึง Application",
+      code: `# ดู Encapsulation จริงด้วย Wireshark / tcpdump
+
+# ดู Ethernet frame (Layer 2) + IP header (Layer 3)
+sudo tcpdump -i eth0 -vv -n dst host 8.8.8.8
+
+# ดู HTTP request (Layer 7) ไม่เข้ารหัส
+sudo tcpdump -i eth0 -A -s 0 'tcp port 80'
+
+# ดู Layer 1/2 interface status  
+ip link show
+ethtool eth0`,
+      language: "bash",
+    },
+    {
+      title: "ใช้ OSI Troubleshoot อย่างไร?",
+      body: "เมื่อเน็ตมีปัญหา ให้ตรวจจาก Layer ล่างขึ้นบน:\n\nLayer 1 (Physical): สายหลุดไหม? LED ติดไหม? → ping ไม่ได้เลย\nLayer 2 (Data Link): Switch port ดีไหม? VLAN ถูกไหม? → ping ใน subnet ไม่ได้\nLayer 3 (Network): Route ถูกไหม? IP ชนกันไหม? → ping ข้าม subnet ไม่ได้\nLayer 4 (Transport): Port เปิดไหม? Firewall block? → connect service ไม่ได้\nLayer 7 (Application): Service config ถูกไหม? Cert หมดอายุ? → connect ได้แต่ error",
+      code: `# Layer 1/2 check
+ping -c 3 192.168.1.1        # ถ้า ping ไม่ได้ = Layer 1/2/3 มีปัญหา
+arp -n                        # ดู MAC table (Layer 2)
+
+# Layer 3 check
+ip route show                 # ดู routing table
+traceroute 8.8.8.8            # ดูว่า packet ไปถึงไหน
+
+# Layer 4 check
+telnet 192.168.1.1 22         # test port open
+nmap -p 22,80,443 target-ip
+
+# Layer 7 check
+curl -v https://example.com   # ดู HTTP response detail`,
+      language: "bash",
+      tip: "OSI Troubleshooting rule: Bottom-up — แก้ Layer ล่างก่อนเสมอ ไม่งั้นเสียเวลา debug Layer บน",
+    },
+  ],
+
   mermaidDiagram: `graph TB
     subgraph OSI ["OSI 7 Layer Model"]
       L7["Layer 7 — Application\n HTTP, DNS, SMTP, FTP"]
@@ -233,6 +293,81 @@ const tcpipModel: Lesson = {
   ],
   prerequisites: ["osi-model"],
   concepts: ["TCP", "UDP", "IP", "3-Way Handshake", "SYN", "SYN-ACK", "ACK", "Port", "Socket", "Reliable", "Connectionless"],
+  sections: [
+    {
+      title: "TCP/IP Model คืออะไร?",
+      body: "TCP/IP Model (Transmission Control Protocol/Internet Protocol) คือโครงสร้างสถาปัตยกรรมเครือข่ายที่ใช้จริงบนอินเทอร์เน็ตในปัจจุบัน\n\nต่างจาก OSI Model (7 Layer) ที่เป็นแค่ทฤษฎี — TCP/IP มี 4 Layer จริงๆ ที่ทำงานอยู่ทุกครั้งที่คุณเปิดเว็บหรือส่ง Email",
+      table: {
+        header: ["TCP/IP Layer", "ทำหน้าที่", "Protocol ตัวอย่าง"],
+        rows: [
+          ["Application (4)", "จัดการ data ระดับ Application", "HTTP, HTTPS, DNS, FTP, SMTP"],
+          ["Transport (3)", "ส่งข้อมูล end-to-end, port numbers", "TCP, UDP"],
+          ["Internet (2)", "Routing ระหว่าง network", "IP, ICMP, ARP"],
+          ["Network Access (1)", "Physical + Data Link", "Ethernet, Wi-Fi, PPP"],
+        ],
+      },
+      tip: "จำง่ายๆ: Application → Transport → Internet → Network Access (A-T-I-N หรือ 'ทีมอินเตอร์เน็ต')",
+    },
+    {
+      title: "TCP vs UDP — เลือกใช้ยังไง?",
+      body: "Protocol ระดับ Transport มีสองตัวหลักที่ต้องเข้าใจ:\n\n**TCP (Transmission Control Protocol)** — รับประกันว่า data ถึงปลายทางครบถ้วน มีการตรวจสอบและส่งซ้ำถ้า packet หาย\n\n**UDP (User Datagram Protocol)** — เร็วกว่า ไม่มี overhead ของการ confirm แต่ไม่รับประกันว่าถึง",
+      table: {
+        header: ["คุณสมบัติ", "TCP", "UDP"],
+        rows: [
+          ["การรับประกัน", "✅ รับประกันครบ", "❌ Best-effort"],
+          ["ลำดับ packet", "✅ เรียงลำดับ", "❌ ไม่รับประกัน"],
+          ["Speed", "🐢 ช้ากว่า (overhead)", "🚀 เร็วกว่า"],
+          ["Connection", "Connection-based (3-Way)", "Connectionless"],
+          ["ใช้กับ", "Web, Email, File transfer", "Video call, DNS, Gaming"],
+        ],
+      },
+      warning: "อย่าสับสน — UDP ไม่ได้แย่กว่า TCP แค่ use case ต่างกัน Video streaming ต้องการ UDP เพราะถ้าส่งซ้ำจะ lag มากกว่า",
+    },
+    {
+      title: "TCP 3-Way Handshake — กระบวนการสร้าง Connection",
+      body: "ก่อน TCP จะส่งข้อมูล ต้องสร้าง connection ก่อนผ่าน 3 ขั้นตอน:\n\nขั้น 1: Client ส่ง SYN (Synchronize) บอกว่า 'ขอ connect นะ'\nขั้น 2: Server ตอบ SYN-ACK บอกว่า 'โอเค พร้อมแล้ว'\nขั้น 3: Client ส่ง ACK ยืนยันว่า 'รับทราบ เริ่มได้เลย'\n\nหลังจากนี้ connection established — data ไหลได้ทั้งสองทาง",
+      code: `# ดู TCP 3-Way Handshake ด้วย tcpdump
+sudo tcpdump -i eth0 'tcp[tcpflags] & (tcp-syn|tcp-ack) != 0' -n
+
+# ผลที่เห็น:
+# 10.0.0.1.54321 > 10.0.0.2.80: Flags [S]       ← SYN
+# 10.0.0.2.80 > 10.0.0.1.54321: Flags [S.]      ← SYN-ACK  
+# 10.0.0.1.54321 > 10.0.0.2.80: Flags [.]       ← ACK
+
+# ดู established connections
+ss -tuln
+netstat -an | grep ESTABLISHED`,
+      language: "bash",
+      tip: "Flag ย่อใน tcpdump: [S] = SYN, [.] = ACK, [S.] = SYN-ACK, [F] = FIN, [R] = RST",
+    },
+    {
+      title: "Port Numbers — ประตูบ้านของ Service",
+      body: "Port คือ 'ช่อง' ที่ทำให้ device เดียวรัน service หลายตัวพร้อมกันได้ เหมือนตึกมีหลายห้อง แต่ใช้ที่อยู่เดิม\n\nPort แบ่งเป็น 3 range:\n- 0–1023: Well-known ports (require root)\n- 1024–49151: Registered ports\n- 49152–65535: Dynamic/Ephemeral ports (ฝั่ง client ใช้ชั่วคราว)",
+      table: {
+        header: ["Port", "Protocol", "Service"],
+        rows: [
+          ["22", "TCP", "SSH — Remote access เข้ารหัส"],
+          ["80", "TCP", "HTTP — Web ไม่เข้ารหัส"],
+          ["443", "TCP", "HTTPS — Web เข้ารหัส TLS"],
+          ["53", "UDP/TCP", "DNS — แปลง domain → IP"],
+          ["25", "TCP", "SMTP — ส่ง Email"],
+          ["3306", "TCP", "MySQL — Database"],
+          ["6379", "TCP", "Redis — Cache"],
+        ],
+      },
+      code: `# ดู port ที่กำลัง listen
+ss -tuln
+
+# ดู process ที่ใช้ port นั้น
+sudo lsof -i :443
+sudo netstat -tlnp | grep 443
+
+# scan port ด้วย nmap
+nmap -p 22,80,443 192.168.1.1`,
+      language: "bash",
+    },
+  ],
+
   mermaidDiagram: `sequenceDiagram
     participant C as Client
     participant S as Server

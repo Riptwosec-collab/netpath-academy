@@ -57,6 +57,16 @@ export interface PortfolioTask {
   deliverables: string[];
 }
 
+export interface LessonSection {
+  title: string;
+  body: string;                  // prose explanation (\n\n = paragraph break)
+  code?: string;                 // optional code/config block
+  language?: string;             // "bash" | "python" | "yaml" | "text" | "cisco"
+  table?: { header: string[]; rows: string[][] };
+  tip?: string;                  // highlighted tip
+  warning?: string;              // highlighted warning
+}
+
 // ─── Main Lesson type ────────────────────────────────────────────
 export interface Lesson {
   id: string;
@@ -66,13 +76,14 @@ export interface Lesson {
   track: CourseTrack;
   category: string;
   level: CourseLevel;
-  duration: string;         // e.g. "45 min"
+  duration: string;
   xp: number;
   description: string;
   objectives: string[];
   prerequisites: string[];
   concepts: string[];
-  architecture?: string;    // text description of architecture
+  sections?: LessonSection[];   // rich educational content sections
+  architecture?: string;
   mermaidDiagram?: string;
   trafficFlow?: string[];
   commands?: LessonCommand[];
@@ -83,7 +94,7 @@ export interface Lesson {
   interviewQuestions: InterviewQuestion[];
   portfolioTask?: PortfolioTask;
   tags: string[];
-  order: number;            // sort order within category/track
+  order: number;
 }
 
 // ─── Track definition ────────────────────────────────────────────
@@ -93,7 +104,7 @@ export interface TrackInfo {
   titleTh: string;
   description: string;
   icon: string;
-  color: string;            // Tailwind color key e.g. "cyan"
+  color: string;
   lessons: Lesson[];
   totalXp: number;
   estimatedHours: number;
@@ -107,8 +118,9 @@ export interface FoundationCategory {
   id: string;
   title: string;
   titleTh: string;
+  description?: string;
   icon: string;
-  description: string;
+  color?: string;
+  order?: number;
   lessons: Lesson[];
-  order: number;
 }
