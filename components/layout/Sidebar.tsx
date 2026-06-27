@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { getTotalXp, getStreak, touchStreak } from "@/lib/progress";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   LayoutDashboard, Map, BookOpen, FlaskConical, Brain,
   Wrench, Bot, Trophy, FolderKanban, Network, Settings,
@@ -13,103 +14,103 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ─── Types ────────────────────────────────────────────────────────
 interface NavItem {
-  href: string;
-  label: string;
-  Icon: LucideIcon;
+  href:  string;
+  tKey:  string;       // i18n key
+  Icon:  LucideIcon;
 }
 
 interface NavGroup {
-  label: string;
-  items: NavItem[];
+  tKey:        string; // i18n key for group label
+  items:       NavItem[];
   collapsible?: boolean;
 }
 
-// ─── Navigation structure ─────────────────────────────────────────
-const navGroups: NavGroup[] = [
+// Static structure — labels resolved via t() at render time
+const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Overview",
+    tKey: "sidebar.overview",
     items: [
-      { href: "/dashboard", label: "Dashboard",   Icon: LayoutDashboard },
-      { href: "/roadmap",   label: "Roadmap",     Icon: Map },
+      { href: "/dashboard", tKey: "nav.dashboard", Icon: LayoutDashboard },
+      { href: "/roadmap",   tKey: "nav.roadmap",   Icon: Map },
     ],
   },
   {
-    label: "Foundation",
+    tKey: "sidebar.foundation",
     collapsible: true,
     items: [
-      { href: "/foundation",                    label: "Foundation Home",     Icon: BookOpen },
-      { href: "/foundation/network-fundamentals", label: "Network Fundamentals", Icon: Network },
-      { href: "/foundation/osi-tcpip",          label: "OSI / TCP-IP",        Icon: Layers },
-      { href: "/foundation/ip-subnetting",      label: "IP / Subnetting",     Icon: Terminal },
-      { href: "/foundation/switching",          label: "Switching",           Icon: HardDrive },
-      { href: "/foundation/routing",            label: "Routing",             Icon: Map },
-      { href: "/foundation/firewall-vpn",       label: "Firewall / VPN",      Icon: Shield },
-      { href: "/foundation/wireless-basic",     label: "Wireless Basic",      Icon: Wifi },
-      { href: "/foundation/monitoring-basic",   label: "Monitoring Basic",    Icon: Cpu },
-      { href: "/foundation/troubleshooting-basic", label: "Troubleshooting",  Icon: Wrench },
-      { href: "/foundation/documentation",      label: "Documentation",       Icon: FolderKanban },
+      { href: "/foundation",                         tKey: "nav.foundationHome",       Icon: BookOpen },
+      { href: "/foundation/network-fundamentals",    tKey: "nav.networkFundamentals",  Icon: Network },
+      { href: "/foundation/osi-tcpip",               tKey: "nav.osiTcpip",             Icon: Layers },
+      { href: "/foundation/ip-subnetting",           tKey: "nav.ipSubnetting",         Icon: Terminal },
+      { href: "/foundation/switching",               tKey: "nav.switching",            Icon: HardDrive },
+      { href: "/foundation/routing",                 tKey: "nav.routing",              Icon: Map },
+      { href: "/foundation/firewall-vpn",            tKey: "nav.firewallVpn",          Icon: Shield },
+      { href: "/foundation/wireless-basic",          tKey: "nav.wirelessBasic",        Icon: Wifi },
+      { href: "/foundation/monitoring-basic",        tKey: "nav.monitoringBasic",      Icon: Cpu },
+      { href: "/foundation/troubleshooting-basic",   tKey: "nav.troubleshootingBasic", Icon: Wrench },
+      { href: "/foundation/documentation",           tKey: "nav.documentation",        Icon: FolderKanban },
     ],
   },
   {
-    label: "Advanced Tracks",
+    tKey: "sidebar.advanced",
     collapsible: true,
     items: [
-      { href: "/advanced",                           label: "Advanced Home",         Icon: Award },
-      { href: "/advanced/network-automation",       label: "Network Automation 🐍", Icon: Terminal },
-      { href: "/advanced/ai-infrastructure",        label: "AI Infrastructure",     Icon: Cpu },
-      { href: "/advanced/cloud-ai-ops",             label: "Cloud Native & AI Ops", Icon: Server },
-      { href: "/advanced/wireless-mobile",          label: "Wireless & Mobile",     Icon: Radio },
-      { href: "/advanced/security",                 label: "Modern Security",       Icon: Shield },
-      { href: "/advanced/hardware-infrastructure",  label: "Network Hardware",      Icon: HardDrive },
+      { href: "/advanced",                          tKey: "nav.advancedHome",             Icon: Award },
+      { href: "/advanced/network-automation",       tKey: "nav.networkAutoItem",          Icon: Terminal },
+      { href: "/advanced/ai-infrastructure",        tKey: "nav.aiInfrastructure",         Icon: Cpu },
+      { href: "/advanced/cloud-ai-ops",             tKey: "nav.cloudAiOps",              Icon: Server },
+      { href: "/advanced/wireless-mobile",          tKey: "nav.wirelessMobile",           Icon: Radio },
+      { href: "/advanced/security",                 tKey: "nav.securityTrack",            Icon: Shield },
+      { href: "/advanced/hardware-infrastructure",  tKey: "nav.hardwareInfrastructure",   Icon: HardDrive },
     ],
   },
   {
-    label: "Hardware",
+    tKey: "sidebar.hardware",
     collapsible: true,
     items: [
-      { href: "/hardware",                      label: "Hardware Home",         Icon: Server },
-      { href: "/hardware/cabling",              label: "Cabling & Connectors",  Icon: Zap },
-      { href: "/hardware/switching",            label: "Switch Hardware",       Icon: HardDrive },
-      { href: "/hardware/routing",              label: "Router Hardware",       Icon: Map },
-      { href: "/hardware/security",             label: "Firewall Appliances",   Icon: Shield },
-      { href: "/hardware/wireless",             label: "Wireless Hardware",     Icon: Wifi },
-      { href: "/hardware/datacenter",           label: "Data Center HW",        Icon: Server },
-      { href: "/hardware/ai-gpu",               label: "AI/GPU Hardware",       Icon: Cpu },
-      { href: "/hardware/monitoring",           label: "Monitoring / TAP",      Icon: Antenna },
-      { href: "/hardware/power-rack-cooling",   label: "Power / Rack / Cooling",Icon: Zap },
-      { href: "/hardware/isp-wan-edge",         label: "ISP / WAN / Edge",      Icon: Network },
-      { href: "/hardware/voice-iot-ot",         label: "Voice / IoT / OT",      Icon: Radio },
+      { href: "/hardware",                     tKey: "nav.hardwareHome",       Icon: Server },
+      { href: "/hardware/cabling",             tKey: "nav.cabling",            Icon: Zap },
+      { href: "/hardware/switching",           tKey: "nav.switchHardware",     Icon: HardDrive },
+      { href: "/hardware/routing",             tKey: "nav.routerHardware",     Icon: Map },
+      { href: "/hardware/security",            tKey: "nav.firewallAppliances", Icon: Shield },
+      { href: "/hardware/wireless",            tKey: "nav.wirelessHardware",   Icon: Wifi },
+      { href: "/hardware/datacenter",          tKey: "nav.datacenterHw",       Icon: Server },
+      { href: "/hardware/ai-gpu",              tKey: "nav.aiGpuHardware",      Icon: Cpu },
+      { href: "/hardware/monitoring",          tKey: "nav.monitoringTap",      Icon: Antenna },
+      { href: "/hardware/power-rack-cooling",  tKey: "nav.powerRackCooling",   Icon: Zap },
+      { href: "/hardware/isp-wan-edge",        tKey: "nav.ispWanEdge",         Icon: Network },
+      { href: "/hardware/voice-iot-ot",        tKey: "nav.voiceIotOt",         Icon: Radio },
     ],
   },
   {
-    label: "Learning Tools",
+    tKey: "sidebar.tools",
     items: [
-      { href: "/search",          label: "Search Lessons",  Icon: Network },
-      { href: "/labs",            label: "Labs",            Icon: FlaskConical },
-      { href: "/quiz",            label: "Quiz",            Icon: Brain },
-      { href: "/exam",            label: "Exam Center",     Icon: GraduationCap },
-      { href: "/flashcards",      label: "Flashcards",      Icon: Layers },
-      { href: "/troubleshooting", label: "Troubleshooting", Icon: Wrench },
-      { href: "/commands",        label: "Cheat Sheets",    Icon: Terminal },
-      { href: "/ai-tutor",        label: "AI Tutor",        Icon: Bot },
-      { href: "/tools",           label: "Tools",           Icon: Network },
+      { href: "/search",          tKey: "nav.searchLessons",    Icon: Network },
+      { href: "/labs",            tKey: "nav.labs",             Icon: FlaskConical },
+      { href: "/quiz",            tKey: "nav.quiz",             Icon: Brain },
+      { href: "/exam",            tKey: "nav.examCenter",       Icon: GraduationCap },
+      { href: "/flashcards",      tKey: "nav.flashcards",       Icon: Layers },
+      { href: "/troubleshooting", tKey: "nav.troubleshooting",  Icon: Wrench },
+      { href: "/commands",        tKey: "nav.cheatSheets",      Icon: Terminal },
+      { href: "/ai-tutor",        tKey: "nav.aiTutor",          Icon: Bot },
+      { href: "/tools",           tKey: "nav.tools",            Icon: Network },
     ],
   },
   {
-    label: "Progress",
+    tKey: "sidebar.account",
     items: [
-      { href: "/progress",     label: "Progress",        Icon: Trophy },
-      { href: "/portfolio",    label: "Portfolio",       Icon: FolderKanban },
-      { href: "/skill-tree",   label: "Skill Tree",      Icon: Award },
-      { href: "/career",       label: "Career Paths",    Icon: Map },
-      { href: "/certifications", label: "Certifications",Icon: GraduationCap },
+      { href: "/progress",      tKey: "nav.progress",      Icon: Trophy },
+      { href: "/portfolio",     tKey: "nav.portfolio",     Icon: FolderKanban },
+      { href: "/skill-tree",    tKey: "nav.skillTree",     Icon: Award },
+      { href: "/career",        tKey: "nav.career",        Icon: Map },
+      { href: "/certifications",tKey: "nav.certifications",Icon: GraduationCap },
+      { href: "/settings",      tKey: "nav.settings",      Icon: Settings },
     ],
   },
 ];
 
-// ─── Single nav link ──────────────────────────────────────────────
+// ─── Single nav link ───────────────────────────────────────────────
 function NavLink({
   href, label, Icon, active, indent = false,
 }: {
@@ -139,13 +140,15 @@ function NavLink({
   );
 }
 
-// ─── Collapsible Group ────────────────────────────────────────────
+// ─── Collapsible Group ─────────────────────────────────────────────
 function CollapsibleGroup({
-  group, pathname,
+  group, pathname, t,
 }: {
-  group: NavGroup; pathname: string;
+  group: NavGroup; pathname: string; t: (key: string) => string;
 }) {
-  const isActive = group.items.some(i => pathname.startsWith(i.href) && i.href !== "/dashboard");
+  const isActive = group.items.some(
+    i => pathname.startsWith(i.href) && i.href !== "/dashboard",
+  );
   const [open, setOpen] = useState(isActive);
 
   return (
@@ -158,19 +161,22 @@ function CollapsibleGroup({
           open ? "text-white/60" : "text-white/25 hover:text-white/40",
         )}
       >
-        {group.label}
+        {t(group.tKey)}
         {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
       </button>
 
       {open && (
         <div className="flex flex-col gap-0.5 mt-0.5">
-          {group.items.map(({ href, label, Icon }, i) => (
+          {group.items.map(({ href, tKey, Icon }, i) => (
             <NavLink
               key={href}
               href={href}
-              label={label}
+              label={t(tKey)}
               Icon={Icon}
-              active={pathname === href || (href !== "/foundation" && href !== "/advanced" && href !== "/hardware" && pathname.startsWith(href))}
+              active={
+                pathname === href ||
+                (i > 0 && !["foundation","advanced","hardware"].includes(href.replace("/","")) && pathname.startsWith(href))
+              }
               indent={i > 0}
             />
           ))}
@@ -180,9 +186,10 @@ function CollapsibleGroup({
   );
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────
+// ─── Sidebar ───────────────────────────────────────────────────────
 export default function Sidebar() {
-  const pathname = usePathname();
+  const pathname          = usePathname();
+  const { t }             = useLanguage();
   const [xp,     setXp]     = useState(0);
   const [streak, setStreak] = useState(0);
 
@@ -210,20 +217,20 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex flex-col gap-4 flex-1 overflow-y-auto scrollbar-none pr-0.5">
-        {navGroups.map((group) =>
+        {NAV_GROUPS.map((group) =>
           group.collapsible ? (
-            <CollapsibleGroup key={group.label} group={group} pathname={pathname} />
+            <CollapsibleGroup key={group.tKey} group={group} pathname={pathname} t={t} />
           ) : (
-            <div key={group.label}>
+            <div key={group.tKey}>
               <p className="text-[10px] font-bold text-white/25 uppercase tracking-[0.15em] px-3 mb-1.5">
-                {group.label}
+                {t(group.tKey)}
               </p>
               <div className="flex flex-col gap-0.5">
-                {group.items.map(({ href, label, Icon }) => (
+                {group.items.map(({ href, tKey, Icon }) => (
                   <NavLink
                     key={href}
                     href={href}
-                    label={label}
+                    label={t(tKey)}
                     Icon={Icon}
                     active={pathname === href}
                   />
@@ -238,13 +245,13 @@ export default function Sidebar() {
       <div className="mt-4 pt-4 border-t border-white/[0.06] flex flex-col gap-1.5">
         <div className="mx-1 px-3 py-3 rounded-xl bg-gradient-to-br from-cyan-500/8 to-violet-500/8 border border-white/[0.07]">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] text-white/35 uppercase tracking-wider">Skill Level</p>
+            <p className="text-[10px] text-white/35 uppercase tracking-wider">{t("common.level")}</p>
             {streak > 0 && (
-              <span className="text-[10px] text-orange-400 font-semibold">🔥 {streak}d</span>
+              <span className="text-[10px] text-orange-400 font-semibold">🔥 {streak}{t("common.min").charAt(0)}</span>
             )}
           </div>
           <p className="text-[11px] font-semibold text-white/70">{level}</p>
-          <p className="text-[10px] text-white/30">{xp.toLocaleString()} XP</p>
+          <p className="text-[10px] text-white/30">{xp.toLocaleString()} {t("common.xp")}</p>
           <div className="mt-2 h-1 w-full bg-white/10 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-cyan-500 to-violet-500 rounded-full transition-all duration-700"
